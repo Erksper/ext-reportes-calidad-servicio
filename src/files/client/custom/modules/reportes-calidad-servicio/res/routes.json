@@ -6,28 +6,8 @@
             "action": "index"
         },
         {
-            "route": "CCustomerSurvey/comparacion-asesores",
-            "controller": "principal",
-            "action": "comparacionAsesores"
-        },
-        {
-            "route": "reporte-calidad-servicio/comparacionOficinas",
-            "controller": "principal",
-            "action": "comparacionOficinas"
-        },
-        {
-            "route": "reportes-calidad-servicio/test-simple",
-            "controller": "principal",
-            "action": "testSimple"
-        },
-        {
-            "route": "reportes-calidad-servicio/prueba",
-            "controller": "reportes-calidad-servicio:controllers/principal",
-            "action": "prueba"
-        },
-        {
             "route": "Prueba",
-            "controller": "reportes-calidad-servicio:controllers/principal",
+            "controller": "principal",
             "action": "prueba"
         }
     ]
