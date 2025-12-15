@@ -1,6 +1,4 @@
-define("reportes-calidad-servicio:controllers/reportesCalidadServicio", [
-    "controllers/base",
-], function (Base) {
+define("reportes-calidad-servicio:controllers/principal", ["controllers/base"], function (Base) {
     return Base.extend({
         checkAccess: function () {
             return true;
@@ -9,6 +7,10 @@ define("reportes-calidad-servicio:controllers/reportesCalidadServicio", [
         defaultAction: "index",
 
         actionIndex: function () {
+            console.log("🔍 DEBUG: Controlador principal cargado");
+            console.log("🔍 DEBUG: this:", this);
+            console.log("🔍 DEBUG: Nombre del controlador:", this.name);
+            
             const viewParams = {
                 scope: "CCustomerSurvey",
                 initialStats: this.getDefaultStats(),
