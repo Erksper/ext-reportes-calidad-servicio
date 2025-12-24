@@ -14,9 +14,9 @@ define("reportes-calidad-servicio:views/modules/estadisticas", [], function () {
             asesoresDestacados: [],
             promediosCategorias: {},
             distribucionCalificaciones: {},
-            recomendacion: { si: 0, no: 0 }, // ✅ AGREGADO
-            mediosContacto: {}, // ✅ AGREGADO
-            estadisticasOficinas: [], // ✅ AGREGADO
+            recomendacion: { si: 0, no: 0 },
+            mediosContacto: {},
+            estadisticasOficinas: [],
             efectividadComunicacion: 0,
             asesoriaLegal: 0,
             presentacionPersonal: 0,
@@ -150,7 +150,6 @@ define("reportes-calidad-servicio:views/modules/estadisticas", [], function () {
 
                     try {
                         this.view.graficosManager.renderCharts();
-                        // ✅ AGREGAR: Cargar comentarios si es vista de asesor
                         var filtros = this.view.filtrosCLAManager.getFiltros();
                         if (filtros.asesor) {
                             this.cargarComentariosAsesor();
@@ -212,9 +211,7 @@ define("reportes-calidad-servicio:views/modules/estadisticas", [], function () {
                 "</span>";
         }
 
-        // ✅ NUEVO: Renderizado condicional según el filtro activo
         if (filtros.asesor) {
-            // Vista específica para asesor individual
             return this.getAsesorDetailHTML(
                 stats,
                 filtros,
@@ -228,7 +225,6 @@ define("reportes-calidad-servicio:views/modules/estadisticas", [], function () {
                 alquilerPct
             );
         } else {
-            // Vista general (territorio, CLA, oficina)
             return this.getGeneralViewHTML(
                 stats,
                 filtros,
@@ -258,7 +254,6 @@ define("reportes-calidad-servicio:views/modules/estadisticas", [], function () {
     ) {
         return `
         <div class="reporte-container">
-            <!-- Información de Encuesta -->
             <div class="info-encuesta-card">
                 <h3 class="info-title">Información de Encuesta ${tituloFiltro}</h3>
                 <table class="info-table">
@@ -281,7 +276,6 @@ define("reportes-calidad-servicio:views/modules/estadisticas", [], function () {
                 </table>
             </div>
 
-            <!-- Sección de Operaciones -->
             <div class="seccion-operaciones">
                 <h2 class="titulo-seccion">¿Qué tipo de operación realizó?</h2>
                 
@@ -328,7 +322,6 @@ define("reportes-calidad-servicio:views/modules/estadisticas", [], function () {
                     </div>
                 </div>
 
-                <!-- Evaluación del servicio prestado -->
                 <div class="graficos-secundarios" style="margin-top: 40px;">
                     <div class="grafico-card grande">
                         <h3 class="grafico-titulo">Evaluación del servicio prestado por el Asesor Inmobiliario</h3>
@@ -338,7 +331,6 @@ define("reportes-calidad-servicio:views/modules/estadisticas", [], function () {
                     </div>
                 </div>
 
-                <!-- Evaluación de Satisfacción -->
                 <div class="graficos-secundarios" style="margin-top: 40px;">
                     <div class="grafico-card grande">
                         <h3 class="grafico-titulo">Evaluación de la satisfacción del servicio</h3>
@@ -348,7 +340,6 @@ define("reportes-calidad-servicio:views/modules/estadisticas", [], function () {
                     </div>
                 </div>
 
-                <!-- Cómo percibió el servicio -->
                 <div class="graficos-secundarios" style="margin-top: 40px;">
                     <div class="grafico-card">
                         <h3 class="grafico-titulo">¿Cómo percibió el servicio prestado por el Asesor?</h3>
@@ -358,7 +349,6 @@ define("reportes-calidad-servicio:views/modules/estadisticas", [], function () {
                     </div>
                 </div>
 
-                <!-- Medio de contacto -->
                 <div class="graficos-secundarios" style="margin-top: 40px;">
                     <div class="grafico-card">
                         <h3 class="grafico-titulo">¿Por cuál medio se puso en contacto?</h3>
@@ -368,7 +358,6 @@ define("reportes-calidad-servicio:views/modules/estadisticas", [], function () {
                     </div>
                 </div>
 
-                <!-- ✅ NUEVO: Comentarios del asesor -->
                 <div class="graficos-secundarios" style="margin-top: 40px;">
                     <div class="grafico-card grande">
                         <h3 class="grafico-titulo">💬 Comentarios y Sugerencias de los Clientes</h3>
@@ -397,9 +386,18 @@ define("reportes-calidad-servicio:views/modules/estadisticas", [], function () {
         compraPct,
         alquilerPct
     ) {
+        let nombreCLA = "Territorio Nacional";
+
+        if (filtros.cla && filtros.cla !== "CLA0") {
+            const claSelect = this.view.$el.find("#cla-select");
+            if (claSelect.length) {
+                const optionSeleccionada = claSelect.find("option:selected");
+                nombreCLA = optionSeleccionada.text() || filtros.cla;
+            }
+        }
+
         return `
         <div class="reporte-container">
-            <!-- Información de Encuesta -->
             <div class="info-encuesta-card">
                 <h3 class="info-title">Información de Encuesta ${tituloFiltro}</h3>
                 <table class="info-table">
@@ -422,7 +420,6 @@ define("reportes-calidad-servicio:views/modules/estadisticas", [], function () {
                 </table>
             </div>
 
-            <!-- Sección de Tipo de Operación -->
             <div class="seccion-operaciones">
                 <h2 class="titulo-seccion">¿Qué tipo de operación realizó?</h2>
                 
@@ -544,14 +541,11 @@ define("reportes-calidad-servicio:views/modules/estadisticas", [], function () {
             )
             .catch(
                 function (error) {
-                    console.error("Error cargando comentarios:", error);
                     this.renderComentarios([]);
                 }.bind(this)
             );
     };
 
-    // ✅ NUEVO: Renderizar lista de comentarios
-    // En el método renderComentarios:
     EstadisticasManager.prototype.renderComentarios = function (comentarios) {
         var container = document.getElementById("comentarios-container");
 
@@ -569,15 +563,15 @@ define("reportes-calidad-servicio:views/modules/estadisticas", [], function () {
             return;
         }
 
-        // Configuración de paginación
-        var itemsPorPagina = 5;
+        var comentariosLimitados = comentarios.slice(0, 10);
+
+        var itemsPorPagina = 10;
         var paginaActual = 1;
         var totalPaginas = Math.ceil(comentarios.length / itemsPorPagina);
 
-        // Función para renderizar una página específica
         var renderizarPagina = function (pagina) {
             var inicio = (pagina - 1) * itemsPorPagina;
-            var fin = inicio + itemsPorPagina;
+            var fin = Math.min(inicio + itemsPorPagina, comentarios.length);
             var comentariosPagina = comentarios.slice(inicio, fin);
 
             var html = `
@@ -596,13 +590,18 @@ define("reportes-calidad-servicio:views/modules/estadisticas", [], function () {
                         <i class="fas fa-comments"></i> 
                         ${comentarios.length} comentarios encontrados
                     </span>
+                    ${
+                        comentarios.length > 10
+                            ? '<span style="margin-left: 15px; color: #666; font-size: 14px;">(Mostrando los 10 más recientes)</span>'
+                            : ""
+                    }
                 </div>
+                ${
+                    totalPaginas > 1
+                        ? `
                 <div style="display: flex; align-items: center; gap: 15px;">
                     <span style="color: #7f8c8d; font-size: 14px;">
-                        Mostrando ${inicio + 1}-${Math.min(
-                fin,
-                comentarios.length
-            )} de ${comentarios.length}
+                        Mostrando ${inicio + 1}-${fin} de ${comentarios.length}
                     </span>
                     <div style="display: flex; gap: 5px;">
                         <button onclick="cambiarPagina(${pagina - 1})" 
@@ -671,19 +670,21 @@ define("reportes-calidad-servicio:views/modules/estadisticas", [], function () {
                         </button>
                     </div>
                 </div>
+                `
+                        : ""
+                }
             </div>
         `;
 
             comentariosPagina.forEach(function (comentario, index) {
                 var indiceGlobal = inicio + index + 1;
 
-                // Determinar color de borde según calificación
-                var colorBorde = "#B8A279"; // Default
+                var colorBorde = "#B8A279";
                 if (comentario.calificacionGeneral) {
                     if (comentario.calificacionGeneral >= 4) {
-                        colorBorde = "#27ae60"; // Verde para calificaciones altas
+                        colorBorde = "#27ae60";
                     } else if (comentario.calificacionGeneral <= 2) {
-                        colorBorde = "#e74c3c"; // Rojo para calificaciones bajas
+                        colorBorde = "#e74c3c";
                     }
                 }
 
@@ -800,175 +801,337 @@ define("reportes-calidad-servicio:views/modules/estadisticas", [], function () {
         `;
             });
 
-            // Botones de navegación en la parte inferior
-            html += `
-            ${
-                totalPaginas > 1
-                    ? `
-            <div style="
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                gap: 10px;
-                margin-top: 30px;
-                padding: 20px;
-                background: #f8f9fa;
-                border-radius: 8px;
-            ">
-                <button onclick="cambiarPagina(1)" 
-                        ${pagina === 1 ? "disabled" : ""}
-                        style="
-                            background: ${pagina === 1 ? "#e9ecef" : "#666666"};
-                            color: ${pagina === 1 ? "#95a5a6" : "white"};
-                            border: none;
-                            padding: 8px 15px;
-                            border-radius: 6px;
-                            cursor: ${pagina === 1 ? "not-allowed" : "pointer"};
-                            font-weight: 600;
-                            font-size: 14px;
-                            transition: all 0.3s ease;
-                        " onmouseover="this.style.transform='translateY(-2px)';" 
-                        onmouseout="this.style.transform='translateY(0)';">
-                    <i class="fas fa-angle-double-left"></i> Primera
-                </button>
-                
-                <button onclick="cambiarPagina(${pagina - 1})" 
-                        ${pagina === 1 ? "disabled" : ""}
-                        style="
-                            background: ${pagina === 1 ? "#e9ecef" : "#B8A279"};
-                            color: ${pagina === 1 ? "#95a5a6" : "white"};
-                            border: none;
-                            padding: 8px 15px;
-                            border-radius: 6px;
-                            cursor: ${pagina === 1 ? "not-allowed" : "pointer"};
-                            font-weight: 600;
-                            font-size: 14px;
-                            transition: all 0.3s ease;
-                        " onmouseover="this.style.transform='translateY(-2px)';" 
-                        onmouseout="this.style.transform='translateY(0)';">
-                    <i class="fas fa-chevron-left"></i> Anterior
-                </button>
-                
+            if (totalPaginas > 1) {
+                html += `
                 <div style="
                     display: flex;
-                    gap: 5px;
+                    justify-content: center;
                     align-items: center;
-                    margin: 0 10px;
+                    gap: 10px;
+                    margin-top: 30px;
+                    padding: 20px;
+                    background: #f8f9fa;
+                    border-radius: 8px;
                 ">
-                    ${Array.from(
-                        { length: Math.min(5, totalPaginas) },
-                        (_, i) => {
-                            var paginaNum = i + 1;
-                            if (totalPaginas > 5) {
-                                if (pagina <= 3) {
-                                    paginaNum = i + 1;
-                                } else if (pagina >= totalPaginas - 2) {
-                                    paginaNum = totalPaginas - 4 + i;
-                                } else {
-                                    paginaNum = pagina - 2 + i;
+                    <button onclick="cambiarPagina(1)" 
+                            ${pagina === 1 ? "disabled" : ""}
+                            style="
+                                background: ${
+                                    pagina === 1 ? "#e9ecef" : "#666666"
+                                };
+                                color: ${pagina === 1 ? "#95a5a6" : "white"};
+                                border: none;
+                                padding: 8px 15px;
+                                border-radius: 6px;
+                                cursor: ${
+                                    pagina === 1 ? "not-allowed" : "pointer"
+                                };
+                                font-weight: 600;
+                                font-size: 14px;
+                                transition: all 0.3s ease;
+                            " onmouseover="this.style.transform='translateY(-2px)';" 
+                            onmouseout="this.style.transform='translateY(0)';">
+                        <i class="fas fa-angle-double-left"></i> Primera
+                    </button>
+                    
+                    <button onclick="cambiarPagina(${pagina - 1})" 
+                            ${pagina === 1 ? "disabled" : ""}
+                            style="
+                                background: ${
+                                    pagina === 1 ? "#e9ecef" : "#B8A279"
+                                };
+                                color: ${pagina === 1 ? "#95a5a6" : "white"};
+                                border: none;
+                                padding: 8px 15px;
+                                border-radius: 6px;
+                                cursor: ${
+                                    pagina === 1 ? "not-allowed" : "pointer"
+                                };
+                                font-weight: 600;
+                                font-size: 14px;
+                                transition: all 0.3s ease;
+                            " onmouseover="this.style.transform='translateY(-2px)';" 
+                            onmouseout="this.style.transform='translateY(0)';">
+                        <i class="fas fa-chevron-left"></i> Anterior
+                    </button>
+                    
+                    <div style="
+                        display: flex;
+                        gap: 5px;
+                        align-items: center;
+                        margin: 0 10px;
+                    ">
+                        ${Array.from(
+                            { length: Math.min(5, totalPaginas) },
+                            (_, i) => {
+                                var paginaNum = i + 1;
+                                if (totalPaginas > 5) {
+                                    if (pagina <= 3) {
+                                        paginaNum = i + 1;
+                                    } else if (pagina >= totalPaginas - 2) {
+                                        paginaNum = totalPaginas - 4 + i;
+                                    } else {
+                                        paginaNum = pagina - 2 + i;
+                                    }
                                 }
+                                return `
+                            <button onclick="cambiarPagina(${paginaNum})"
+                                    style="
+                                        background: ${
+                                            pagina === paginaNum
+                                                ? "#B8A279"
+                                                : "white"
+                                        };
+                                        color: ${
+                                            pagina === paginaNum
+                                                ? "white"
+                                                : "#666666"
+                                        };
+                                        border: 2px solid ${
+                                            pagina === paginaNum
+                                                ? "#B8A279"
+                                                : "#e9ecef"
+                                        };
+                                        width: 35px;
+                                        height: 35px;
+                                        border-radius: 50%;
+                                        cursor: pointer;
+                                        font-weight: 600;
+                                        transition: all 0.3s ease;
+                                    " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)';" 
+                                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';">
+                                ${paginaNum}
+                            </button>
+                            `;
                             }
-                            return `
-                        <button onclick="cambiarPagina(${paginaNum})"
-                                style="
-                                    background: ${
-                                        pagina === paginaNum
-                                            ? "#B8A279"
-                                            : "white"
-                                    };
-                                    color: ${
-                                        pagina === paginaNum
-                                            ? "white"
-                                            : "#666666"
-                                    };
-                                    border: 2px solid ${
-                                        pagina === paginaNum
-                                            ? "#B8A279"
-                                            : "#e9ecef"
-                                    };
-                                    width: 35px;
-                                    height: 35px;
-                                    border-radius: 50%;
-                                    cursor: pointer;
-                                    font-weight: 600;
-                                    transition: all 0.3s ease;
-                                " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)';" 
-                                onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';">
-                            ${paginaNum}
-                        </button>
-                        `;
-                        }
-                    ).join("")}
+                        ).join("")}
+                    </div>
+                    
+                    <button onclick="cambiarPagina(${pagina + 1})" 
+                            ${pagina === totalPaginas ? "disabled" : ""}
+                            style="
+                                background: ${
+                                    pagina === totalPaginas
+                                        ? "#e9ecef"
+                                        : "#B8A279"
+                                };
+                                color: ${
+                                    pagina === totalPaginas
+                                        ? "#95a5a6"
+                                        : "white"
+                                };
+                                border: none;
+                                padding: 8px 15px;
+                                border-radius: 6px;
+                                cursor: ${
+                                    pagina === totalPaginas
+                                        ? "not-allowed"
+                                        : "pointer"
+                                };
+                                font-weight: 600;
+                                font-size: 14px;
+                                transition: all 0.3s ease;
+                            " onmouseover="this.style.transform='translateY(-2px)';" 
+                            onmouseout="this.style.transform='translateY(0)';">
+                        Siguiente <i class="fas fa-chevron-right"></i>
+                    </button>
+                    
+                    <button onclick="cambiarPagina(${totalPaginas})" 
+                            ${pagina === totalPaginas ? "disabled" : ""}
+                            style="
+                                background: ${
+                                    pagina === totalPaginas
+                                        ? "#e9ecef"
+                                        : "#666666"
+                                };
+                                color: ${
+                                    pagina === totalPaginas
+                                        ? "#95a5a6"
+                                        : "white"
+                                };
+                                border: none;
+                                padding: 8px 15px;
+                                border-radius: 6px;
+                                cursor: ${
+                                    pagina === totalPaginas
+                                        ? "not-allowed"
+                                        : "pointer"
+                                };
+                                font-weight: 600;
+                                font-size: 14px;
+                                transition: all 0.3s ease;
+                            " onmouseover="this.style.transform='translateY(-2px)';" 
+                            onmouseout="this.style.transform='translateY(0)';">
+                        Última <i class="fas fa-angle-double-right"></i>
+                    </button>
                 </div>
-                
-                <button onclick="cambiarPagina(${pagina + 1})" 
-                        ${pagina === totalPaginas ? "disabled" : ""}
-                        style="
-                            background: ${
-                                pagina === totalPaginas ? "#e9ecef" : "#B8A279"
-                            };
-                            color: ${
-                                pagina === totalPaginas ? "#95a5a6" : "white"
-                            };
-                            border: none;
-                            padding: 8px 15px;
-                            border-radius: 6px;
-                            cursor: ${
-                                pagina === totalPaginas
-                                    ? "not-allowed"
-                                    : "pointer"
-                            };
-                            font-weight: 600;
-                            font-size: 14px;
-                            transition: all 0.3s ease;
-                        " onmouseover="this.style.transform='translateY(-2px)';" 
-                        onmouseout="this.style.transform='translateY(0)';">
-                    Siguiente <i class="fas fa-chevron-right"></i>
-                </button>
-                
-                <button onclick="cambiarPagina(${totalPaginas})" 
-                        ${pagina === totalPaginas ? "disabled" : ""}
-                        style="
-                            background: ${
-                                pagina === totalPaginas ? "#e9ecef" : "#666666"
-                            };
-                            color: ${
-                                pagina === totalPaginas ? "#95a5a6" : "white"
-                            };
-                            border: none;
-                            padding: 8px 15px;
-                            border-radius: 6px;
-                            cursor: ${
-                                pagina === totalPagmas
-                                    ? "not-allowed"
-                                    : "pointer"
-                            };
-                            font-weight: 600;
-                            font-size: 14px;
-                            transition: all 0.3s ease;
-                        " onmouseover="this.style.transform='translateY(-2px)';" 
-                        onmouseout="this.style.transform='translateY(0)';">
-                    Última <i class="fas fa-angle-double-right"></i>
-                </button>
-            </div>
-            `
-                    : ""
+            `;
             }
-        </div>
-        `;
+
+            html += `</div>`;
 
             container.innerHTML = html;
         };
 
-        // Función global para cambiar de página
         window.cambiarPagina = function (nuevaPagina) {
             if (nuevaPagina < 1 || nuevaPagina > totalPaginas) return;
             paginaActual = nuevaPagina;
             renderizarPagina(paginaActual);
         };
 
-        // Renderizar primera página
-        renderizarPagina(1);
+        if (comentarios.length <= 10) {
+            var html = `
+                <div class="comentarios-list">
+                    <div style="
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-bottom: 20px;
+                        padding: 15px;
+                        background: #f8f9fa;
+                        border-radius: 8px;
+                    ">
+                        <div>
+                            <span style="font-weight: 600; color: #2c3e50;">
+                                <i class="fas fa-comments"></i> 
+                                ${comentarios.length} comentarios encontrados
+                            </span>
+                        </div>
+                    </div>
+            `;
+
+            comentarios.forEach(function (comentario, index) {
+                var colorBorde = "#B8A279";
+                if (comentario.calificacionGeneral) {
+                    if (comentario.calificacionGeneral >= 4) {
+                        colorBorde = "#27ae60";
+                    } else if (comentario.calificacionGeneral <= 2) {
+                        colorBorde = "#e74c3c";
+                    }
+                }
+
+                html += `
+                    <div class="comentario-item" style="
+                        background: white;
+                        border-left: 4px solid ${colorBorde};
+                        padding: 20px;
+                        margin-bottom: 15px;
+                        border-radius: 8px;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+                    ">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                            <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                                <span style="
+                                    background: #B8A279;
+                                    color: white;
+                                    width: 35px;
+                                    height: 35px;
+                                    border-radius: 50%;
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    font-weight: bold;
+                                    font-size: 16px;
+                                ">${index + 1}</span>
+                                <div>
+                                    <strong style="color: #2c3e50; font-size: 16px; display: block;">
+                                        ${
+                                            comentario.clientName ||
+                                            "Cliente Anónimo"
+                                        }
+                                    </strong>
+                                    ${
+                                        comentario.operationType
+                                            ? `
+                                    <span style="
+                                        background: #e8e8e8;
+                                        color: #666;
+                                        padding: 3px 10px;
+                                        border-radius: 12px;
+                                        font-size: 12px;
+                                        font-weight: 600;
+                                        margin-top: 5px;
+                                        display: inline-block;
+                                    ">
+                                        <i class="fas fa-tag"></i> ${comentario.operationType}
+                                    </span>
+                                    `
+                                            : ""
+                                    }
+                                </div>
+                            </div>
+                            
+                            <div style="text-align: right;">
+                                <span style="color: #7f8c8d; font-size: 13px; display: block; margin-bottom: 5px;">
+                                    <i class="far fa-calendar-alt"></i> ${
+                                        comentario.fecha || "Sin fecha"
+                                    }
+                                </span>
+                                ${
+                                    comentario.calificacionGeneral &&
+                                    comentario.calificacionGeneral !==
+                                        "No calificada"
+                                        ? `
+                                <span style="
+                                    background: ${
+                                        comentario.calificacionGeneral >= 4
+                                            ? "rgba(39, 174, 96, 0.1)"
+                                            : comentario.calificacionGeneral <=
+                                              2
+                                            ? "rgba(231, 76, 60, 0.1)"
+                                            : "rgba(52, 152, 219, 0.1)"
+                                    };
+                                    color: ${
+                                        comentario.calificacionGeneral >= 4
+                                            ? "#27ae60"
+                                            : comentario.calificacionGeneral <=
+                                              2
+                                            ? "#e74c3c"
+                                            : "#3498db"
+                                    };
+                                    padding: 3px 10px;
+                                    border-radius: 12px;
+                                    font-size: 12px;
+                                    font-weight: 700;
+                                    display: inline-block;
+                                ">
+                                    <i class="fas fa-star"></i> ${
+                                        comentario.calificacionGeneral
+                                    }/5
+                                </span>
+                                `
+                                        : ""
+                                }
+                            </div>
+                        </div>
+                        
+                        <div style="
+                            background: #f8f9fa;
+                            padding: 15px;
+                            border-radius: 6px;
+                            margin-top: 10px;
+                            border-left: 3px solid #B8A279;
+                        ">
+                            <p style="
+                                color: #34495e;
+                                line-height: 1.6;
+                                margin: 0;
+                                font-size: 14px;
+                                font-style: italic;
+                                quotes: '\\201C' '\\201D';
+                            ">
+                                &ldquo;${comentario.comentario}&rdquo;
+                            </p>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `</div>`;
+            container.innerHTML = html;
+        } else {
+            renderizarPagina(1);
+        }
     };
 
     EstadisticasManager.prototype.getEmptyHTML = function () {

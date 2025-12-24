@@ -3,9 +3,6 @@ define("reportes-calidad-servicio:views/modules/filtros-asesores", [], function 
         this.view = view;
     };
 
-    /**
-     * Carga los asesores de una oficina específica
-     */
     FiltrosAsesoresManager.prototype.loadAsesores = function (oficinaId) {
         var asesorSelect = this.view.$el.find("#asesor-select");
 
@@ -18,22 +15,45 @@ define("reportes-calidad-servicio:views/modules/filtros-asesores", [], function 
 
         var permisos = this.view.permisosManager.getPermisos();
 
-        // Si el usuario no es admin ni casa nacional
-        if (!permisos.esAdministrativo && !permisos.esCasaNacional) {
-            var user = this.view.getUser();
+        if (permisos.esAsesorRegular) {
+            const tieneRolesGestion =
+                permisos.esGerente ||
+                permisos.esCoordinador ||
+                permisos.esDirector ||
+                permisos.esAfiliado ||
+                permisos.esCasaNacional;
 
-            // Solo mostrar al usuario actual
-            this.cargarAsesorEspecifico(user.id, asesorSelect);
-            return;
+            if (tieneRolesGestion) {
+                this.cargarAsesoresPorOficina(oficinaId);
+            } else {
+                this.cargarOpcionesAsesorRegular(asesorSelect);
+            }
+        } else {
+            this.cargarAsesoresPorOficina(oficinaId);
         }
-
-        // Si es admin o casa nacional, cargar todos los asesores de la oficina
-        this.cargarAsesoresPorOficina(oficinaId);
     };
 
-    /**
-     * Carga un asesor específico (para usuarios sin permisos especiales)
-     */
+    FiltrosAsesoresManager.prototype.cargarOpcionesAsesorRegular = function (
+        asesorSelect
+    ) {
+        var permisos = this.view.permisosManager.getPermisos();
+
+        asesorSelect.empty();
+        asesorSelect.append(
+            '<option value="">📊 Estadísticas de toda la oficina</option>'
+        );
+
+        asesorSelect.append(
+            '<option value="' +
+                permisos.usuarioId +
+                '">👤 Mis estadísticas personales</option>'
+        );
+
+        asesorSelect.prop("disabled", false);
+
+        asesorSelect.val("");
+    };
+
     FiltrosAsesoresManager.prototype.cargarAsesorEspecifico = function (
         userId,
         asesorSelect
@@ -60,7 +80,6 @@ define("reportes-calidad-servicio:views/modules/filtros-asesores", [], function 
                             asesorSelect.val(userId);
                             asesorSelect.prop("disabled", true);
 
-                            // Actualizar filtros
                             this.view.filtrosCLAManager.filtros.asesor = userId;
                             this.view.filtrosCLAManager.filtros.mostrarTodas = false;
                         }.bind(this)
@@ -77,15 +96,19 @@ define("reportes-calidad-servicio:views/modules/filtros-asesores", [], function 
         );
     };
 
-    /**
-     * Carga todos los asesores de una oficina
-     */
     FiltrosAsesoresManager.prototype.cargarAsesoresPorOficina = function (
         oficinaId
     ) {
         var asesorSelect = this.view.$el.find("#asesor-select");
+        var permisos = this.view.permisosManager.getPermisos();
 
-        // Obtener usuarios del equipo (oficina)
+        if (!asesorSelect.length) {
+            return;
+        }
+
+        asesorSelect.html('<option value="">Cargando asesores...</option>');
+        asesorSelect.prop("disabled", true);
+
         this.fetchUsuariosPorOficina(oficinaId)
             .then(
                 function (usuarios) {
@@ -97,34 +120,51 @@ define("reportes-calidad-servicio:views/modules/filtros-asesores", [], function 
                         return;
                     }
 
-                    // Ordenar por nombre
                     usuarios.sort(function (a, b) {
-                        return (a.name || "").localeCompare(b.name || "");
+                        return (a.name || a.userName || "").localeCompare(
+                            b.name || b.userName || ""
+                        );
                     });
 
-                    // Poblar select
                     asesorSelect.empty();
                     asesorSelect.append(
                         '<option value="">Todos los asesores</option>'
                     );
 
                     usuarios.forEach(function (usuario) {
+                        var nombreCompleto =
+                            usuario.name ||
+                            usuario.userName ||
+                            "Usuario #" + usuario.id.substring(0, 8);
+
+                        var tieneEncuestas = usuario.encuestas > 0;
+                        var indicador = tieneEncuestas
+                            ? ` (${usuario.encuestas} encuestas)`
+                            : " (Sin encuestas)";
+
                         asesorSelect.append(
                             '<option value="' +
                                 usuario.id +
                                 '">' +
-                                (usuario.name ||
-                                    usuario.userName ||
-                                    "Usuario sin nombre") +
+                                nombreCompleto +
+                                indicador +
                                 "</option>"
                         );
                     });
 
                     asesorSelect.prop("disabled", false);
+
+                    if (
+                        permisos.esGerente ||
+                        permisos.esDirector ||
+                        permisos.esCoordinador ||
+                        permisos.esAfiliado
+                    ) {
+                        asesorSelect.val("");
+                    }
                 }.bind(this)
             )
             .catch(function (error) {
-                console.error("Error cargando asesores:", error);
                 asesorSelect.html(
                     '<option value="">Error al cargar asesores</option>'
                 );
@@ -132,78 +172,38 @@ define("reportes-calidad-servicio:views/modules/filtros-asesores", [], function 
             });
     };
 
-    /**
-     * Obtiene los usuarios de una oficina específica
-     */
     FiltrosAsesoresManager.prototype.fetchUsuariosPorOficina = function (
         oficinaId
     ) {
-        return new Promise(
-            function (resolve, reject) {
-                var maxSize = 200;
-                var allUsers = [];
-
-                var fetchPage = function (offset) {
-                    this.view.getCollectionFactory().create(
-                        "User",
-                        function (collection) {
-                            collection.maxSize = maxSize;
-                            collection.offset = offset;
-                            collection.data = {
-                                select: "id,name,userName,teamsIds,teamsNames",
+        return new Promise(function (resolve, reject) {
+            Espo.Ajax.getRequest(
+                "CCustomerSurvey/action/getAsesoresByOficina",
+                {
+                    oficinaId: oficinaId,
+                }
+            )
+                .then(function (response) {
+                    if (response && response.success && response.data) {
+                        var usuarios = response.data.map(function (usuario) {
+                            return {
+                                id: usuario.id,
+                                name: usuario.name,
+                                userName: usuario.userName,
+                                encuestas: usuario.encuestas || 0,
                             };
+                        });
 
-                            collection
-                                .fetch()
-                                .then(
-                                    function () {
-                                        var models = collection.models || [];
-
-                                        // Filtrar usuarios que pertenecen a la oficina
-                                        var filtered = models
-                                            .filter(function (u) {
-                                                var teamsIds =
-                                                    u.get("teamsIds") || [];
-                                                return teamsIds.includes(
-                                                    oficinaId
-                                                );
-                                            })
-                                            .map(function (m) {
-                                                return {
-                                                    id: m.id,
-                                                    name: m.get("name"),
-                                                    userName: m.get("userName"),
-                                                    teamsIds: m.get("teamsIds"),
-                                                    teamsNames:
-                                                        m.get("teamsNames"),
-                                                };
-                                            });
-
-                                        allUsers = allUsers.concat(filtered);
-
-                                        if (
-                                            models.length === maxSize &&
-                                            offset + maxSize < collection.total
-                                        ) {
-                                            fetchPage(offset + maxSize);
-                                        } else {
-                                            resolve(allUsers);
-                                        }
-                                    }.bind(this)
-                                )
-                                .catch(reject);
-                        }.bind(this)
-                    );
-                }.bind(this);
-
-                fetchPage(0);
-            }.bind(this)
-        );
+                        resolve(usuarios);
+                    } else {
+                        resolve([]);
+                    }
+                })
+                .catch(function (error) {
+                    reject(error);
+                });
+        });
     };
 
-    /**
-     * Configura los event listeners del select de asesores
-     */
     FiltrosAsesoresManager.prototype.setupEventListeners = function () {
         var asesorSelect = this.view.$el.find("#asesor-select");
 
@@ -212,6 +212,9 @@ define("reportes-calidad-servicio:views/modules/filtros-asesores", [], function 
                 "change",
                 function (e) {
                     var asesorId = $(e.currentTarget).val();
+                    var optionText = $(e.currentTarget)
+                        .find("option:selected")
+                        .text();
 
                     if (
                         this.view.filtrosCLAManager &&
@@ -224,15 +227,20 @@ define("reportes-calidad-servicio:views/modules/filtros-asesores", [], function 
                         if (this.view.estadisticasManager) {
                             this.view.estadisticasManager.loadStatistics();
                         }
+
+                        if (!asesorId) {
+                            Espo.Ui.info(
+                                "Mostrando estadísticas de toda la oficina"
+                            );
+                        } else {
+                            Espo.Ui.info("Mostrando estadísticas personales");
+                        }
                     }
                 }.bind(this)
             );
         }
     };
 
-    /**
-     * Limpia el select de asesores
-     */
     FiltrosAsesoresManager.prototype.limpiarFiltros = function () {
         var asesorSelect = this.view.$el.find("#asesor-select");
         if (asesorSelect.length) {

@@ -1,14 +1,35 @@
 {
     "routes": [
         {
-            "route": "reportes-calidad-servicio",
-            "controller": "principal",
-            "action": "index"
+            "route": "Principal",
+            "params": {
+                "controller": "principal",
+                "action": "index"
+            }
         },
         {
-            "route": "Prueba",
-            "controller": "principal",
-            "action": "prueba"
+            "route": "Principal/oficinas/:claId?",
+            "params": {
+                "controller": "principal",
+                "action": "oficinas",
+                "claId": ":claId"
+            }
+        },
+        {
+            "route": "Principal/asesores/:oficinaId?",
+            "params": {
+                "controller": "principal",
+                "action": "asesores",
+                "oficinaId": ":oficinaId"
+            }
+        },
+        {
+            "route": "Principal/estadisticas-asesor/:asesorId?",
+            "params": {
+                "controller": "principal",
+                "action": "estadisticasAsesor",
+                "asesorId": ":asesorId"
+            }
         }
     ]
 }

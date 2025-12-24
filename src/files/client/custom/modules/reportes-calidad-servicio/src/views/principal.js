@@ -4,7 +4,7 @@ define("reportes-calidad-servicio:views/principal", [
     "reportes-calidad-servicio:views/modules/estadisticas",
     "reportes-calidad-servicio:views/modules/filtros-cla",
     "reportes-calidad-servicio:views/modules/filtros-oficinas",
-    "reportes-calidad-servicio:views/modules/filtros-asesores", // ✅ NUEVO
+    "reportes-calidad-servicio:views/modules/filtros-asesores",
     "reportes-calidad-servicio:views/modules/importador-csv",
     "reportes-calidad-servicio:views/modules/graficos",
 ], function (
@@ -19,46 +19,43 @@ define("reportes-calidad-servicio:views/principal", [
 ) {
     return Dep.extend({
         checkAccess: function () {
-            console.log("🔐 checkAccess llamado");
             return true;
         },
 
         template: "reportes-calidad-servicio:principal",
 
         setup: function () {
-            console.log("🔍 DEBUG: Iniciando setup de principal");
-
-            // Verificar rutas registradas
-            console.log("🔍 DEBUG: Verificando rutas...");
-            if (window.router && window.router.routes) {
-                console.log("🔍 DEBUG: Rutas registradas:");
-                Object.keys(window.router.routes).forEach(function (route) {
-                    console.log("  -", route);
-                });
-            } else {
-                console.log("⚠️ WARNING: No se encontró objeto router.routes");
-            }
-
             var user = this.getUser();
-            this.esAdmin = user.isAdmin();
-            this.restaurarFiltrosDesdeURL();
 
-            // 1. PermisosManager
+            this.userType = user.get("type");
+            this.esAdmin = this.userType === "admin";
+
             if (typeof PermisosManager === "function") {
                 this.permisosManager = new PermisosManager(this);
             } else {
                 this.permisosManager = {
                     cargarPermisosUsuario: function () {
-                        return Promise.reject("Módulo no cargado");
-                    },
+                        if (this.view && this.view.esAdmin) {
+                            return Promise.resolve({
+                                esAdministrativo: true,
+                                puedeImportar: true,
+                            });
+                        }
+                        return Promise.resolve({
+                            esAdministrativo: false,
+                            puedeImportar: false,
+                        });
+                    }.bind(this),
                     getPermisos: function () {
-                        return { puedeImportar: false, permisosListo: false };
+                        return {
+                            puedeImportar: this.view.esAdmin,
+                            permisosListo: true,
+                        };
                     },
                     aplicarRestriccionesUI: function () {},
                 };
             }
 
-            // 2. EstadisticasManager
             if (typeof EstadisticasManager === "function") {
                 this.estadisticasManager = new EstadisticasManager(this);
             } else {
@@ -77,7 +74,6 @@ define("reportes-calidad-servicio:views/principal", [
                 };
             }
 
-            // 3. FiltrosCLAManager
             if (typeof FiltrosCLAManager === "function") {
                 this.filtrosCLAManager = new FiltrosCLAManager(this);
             } else {
@@ -95,7 +91,6 @@ define("reportes-calidad-servicio:views/principal", [
                 };
             }
 
-            // 4. FiltrosOficinasManager
             if (typeof FiltrosOficinasManager === "function") {
                 this.filtrosOficinasManager = new FiltrosOficinasManager(this);
             } else {
@@ -105,7 +100,6 @@ define("reportes-calidad-servicio:views/principal", [
                 };
             }
 
-            // ✅ 5. NUEVO: FiltrosAsesoresManager
             if (typeof FiltrosAsesoresManager === "function") {
                 this.filtrosAsesoresManager = new FiltrosAsesoresManager(this);
             } else {
@@ -116,7 +110,6 @@ define("reportes-calidad-servicio:views/principal", [
                 };
             }
 
-            // 6. ImportadorCSV
             if (typeof ImportadorCSV === "function") {
                 this.importadorCSV = new ImportadorCSV(this);
             } else {
@@ -131,7 +124,6 @@ define("reportes-calidad-servicio:views/principal", [
                 };
             }
 
-            // 7. GraficosManager
             if (typeof GraficosManager === "function") {
                 this.graficosManager = new GraficosManager(this);
             } else {
@@ -142,15 +134,16 @@ define("reportes-calidad-servicio:views/principal", [
                 };
             }
 
-            // Estado inicial
             this.hasData = false;
             this.isLoading = true;
             this.filtros = {
                 cla: null,
                 oficina: null,
-                asesor: null, // ✅ NUEVO
+                asesor: null,
                 mostrarTodas: true,
             };
+
+            this.filtrosGuardados = null;
 
             try {
                 this.importadorCSV.initMappings();
@@ -162,6 +155,7 @@ define("reportes-calidad-servicio:views/principal", [
         data: function () {
             return {
                 esAdmin: this.esAdmin,
+                puedeImportar: this.esAdmin,
             };
         },
 
@@ -186,41 +180,27 @@ define("reportes-calidad-servicio:views/principal", [
         },
 
         cargarPermisosYFiltros: function () {
-            this.permisosManager
-                .cargarPermisosUsuario()
-                .then(
-                    function (permisos) {
-                        this.filtrosCLAManager.cargarFiltros();
-                    }.bind(this)
-                )
-                .catch(
-                    function (error) {
-                        this.estadisticasManager.loadStatistics();
-                    }.bind(this)
-                );
-        },
+            if (
+                this.permisosManager &&
+                typeof this.permisosManager.cargarPermisosUsuario === "function"
+            ) {
+                this.permisosManager
+                    .cargarPermisosUsuario()
+                    .then(
+                        function (permisos) {
+                            permisos.puedeImportar = this.esAdmin;
 
-        afterRender: function () {
-            this.showLoadingState();
-            this.setupEventListeners();
-
-            $(window).on("hashchange", function () {
-                console.log("🔍 DEBUG: Hash changed to:", window.location.hash);
-            });
-
-            // Verificar el hash actual
-            console.log("🔍 DEBUG: Hash actual:", window.location.hash);
-
-            // Intentar restaurar filtros guardados
-            setTimeout(
-                function () {
-                    if (this.restaurarEstadoFiltros()) {
-                        // Si se restauraron filtros, disparar cambios
-                        this.$el.find("#cla-select").trigger("change");
-                    }
-                }.bind(this),
-                100
-            );
+                            this.filtrosCLAManager.cargarFiltros();
+                        }.bind(this)
+                    )
+                    .catch(
+                        function (error) {
+                            this.estadisticasManager.loadStatistics();
+                        }.bind(this)
+                    );
+            } else {
+                this.filtrosCLAManager.cargarFiltros();
+            }
         },
 
         setupEventListeners: function () {
@@ -254,335 +234,137 @@ define("reportes-calidad-servicio:views/principal", [
                     this.estadisticasManager.loadStatistics();
                 });
 
-            // ✅ NUEVO: Event listeners para botones de comparación
-            this.$el
-                .find("#btn-comparar-asesores")
-                .off("click")
-                .on("click", () => {
-                    this.mostrarComparacionAsesores();
-                });
-
-            this.$el
-                .find("#btn-comparar-oficinas")
-                .off("click")
-                .on("click", () => {
-                    this.mostrarComparacionOficinas();
-                });
-
             this.filtrosCLAManager.setupEventListeners();
             this.filtrosOficinasManager.setupEventListeners();
             this.filtrosAsesoresManager.setupEventListeners();
+            this.setupCompararOficinasListener();
         },
 
-        // ✅ FUNCIÓN AUXILIAR para crear gráfico directamente
-        crearGraficoDirectamente: function (config, windowId) {
-            // Esta función es un fallback si el graficosManager no está disponible
-            var ctx = document.getElementById(
-                "chart-comparacion-" + config.tipo
-            );
-            if (!ctx || typeof Chart === "undefined") return;
+        afterRender: function () {
+            this.showLoadingState();
+            this.setupEventListeners();
 
-            // Ordenar datos
-            var datosOrdenados = config.data.sort(function (a, b) {
-                return b.porcentaje - a.porcentaje;
-            });
+            this.setupCompararOficinasListener();
+            this.setupCompararAsesoresListener();
 
-            var labels = datosOrdenados.map(function (item) {
-                return item.nombre || item.id || "Sin nombre";
-            });
-
-            var data = datosOrdenados.map(function (item) {
-                return item.porcentaje || 0;
-            });
-
-            // Colores basados en porcentaje
-            var backgroundColors = data.map(function (porcentaje) {
-                if (porcentaje >= 80) return "#9D8B64";
-                if (porcentaje >= 70) return "#A89968";
-                if (porcentaje >= 60) return "#B8A279";
-                if (porcentaje >= 50) return "#999999";
-                return "#666666";
-            });
-
-            try {
-                new Chart(ctx, {
-                    type: "bar",
-                    data: {
-                        labels: labels,
-                        datasets: [
-                            {
-                                label:
-                                    config.tipo === "asesores"
-                                        ? "Desempeño del Asesor"
-                                        : "Evaluación de la Oficina",
-                                data: data,
-                                backgroundColor: backgroundColors,
-                                borderWidth: 0,
-                                borderRadius: 6,
-                            },
-                        ],
-                    },
-                    options: {
-                        indexAxis: "y",
-                        responsive: true,
-                        maintainAspectRatio: true,
-                        plugins: {
-                            legend: { display: false },
-                            tooltip: {
-                                callbacks: {
-                                    label: function (context) {
-                                        var item =
-                                            datosOrdenados[context.dataIndex];
-                                        var encuestas =
-                                            item.totalEncuestas || 0;
-                                        var promedio =
-                                            config.tipo === "asesores"
-                                                ? (
-                                                      item.promedioGeneral || 0
-                                                  ).toFixed(2)
-                                                : (
-                                                      item.satisfaccionPromedio ||
-                                                      0
-                                                  ).toFixed(2);
-
-                                        return [
-                                            "Desempeño: " +
-                                                context.parsed.x.toFixed(1) +
-                                                "%",
-                                            "Encuestas: " + encuestas,
-                                            "Promedio: " + promedio,
-                                        ];
-                                    },
-                                },
-                            },
-                        },
-                        scales: {
-                            x: {
-                                beginAtZero: true,
-                                max: 100,
-                                grid: { color: "#E6E6E6" },
-                                ticks: {
-                                    callback: function (value) {
-                                        return value + "%";
-                                    },
-                                    font: { size: 12 },
-                                },
-                            },
-                            y: {
-                                grid: { display: false },
-                                ticks: {
-                                    font: { size: 11 },
-                                },
-                            },
-                        },
-                    },
-                });
-            } catch (error) {
-                console.error("Error creando gráfico directamente:", error);
+            if (this.filtrosGuardados) {
+                setTimeout(() => {
+                    this.restaurarFiltros();
+                }, 500);
             }
         },
 
-        configurarEventosCerrar: function (windowId) {
-            var self = this;
+        restaurarFiltros: function () {
+            if (!this.filtrosGuardados) return;
 
-            // Función para cerrar la ventana
-            var cerrarVentana = function () {
-                var ventana = document.getElementById(windowId);
-                if (ventana) {
-                    ventana.remove();
+            const selectCLA = this.$el.find("#cla-select");
+            const selectOficina = this.$el.find("#oficina-select");
+            const selectAsesor = this.$el.find("#asesor-select");
 
-                    // También limpiar cualquier gráfico de comparación que haya quedado
-                    if (window.comparacionChart) {
-                        try {
-                            window.comparacionChart.destroy();
-                            window.comparacionChart = null;
-                        } catch (e) {}
+            if (this.filtrosGuardados.cla) {
+                selectCLA.val(this.filtrosGuardados.cla).trigger("change");
+
+                setTimeout(() => {
+                    if (this.filtrosGuardados.oficina) {
+                        selectOficina
+                            .val(this.filtrosGuardados.oficina)
+                            .trigger("change");
+
+                        setTimeout(() => {
+                            if (this.filtrosGuardados.asesor) {
+                                selectAsesor
+                                    .val(this.filtrosGuardados.asesor)
+                                    .trigger("change");
+                            }
+                        }, 400);
                     }
-                }
+                }, 400);
+            }
+        },
+
+        setupCompararOficinasListener: function () {
+            const self = this;
+
+            const btnComparar = this.$el.find("#btn-comparar-oficinas");
+            const selectCLA = this.$el.find("#cla-select");
+
+            if (btnComparar.length && selectCLA.length) {
+                btnComparar.off("click").on("click", function () {
+                    const claId = selectCLA.val();
+
+                    if (!claId) {
+                        Espo.Ui.warning("Por favor, selecciona un CLA primero");
+                        return;
+                    }
+
+                    self.guardarFiltrosActuales();
+
+                    self.getRouter().navigate("#Principal/oficinas/" + claId, {
+                        trigger: true,
+                    });
+                });
+            }
+        },
+
+        setupCompararAsesoresListener: function () {
+            const self = this;
+
+            const btnComparar = this.$el.find("#btn-comparar-asesores");
+            const selectOficina = this.$el.find("#oficina-select");
+            const selectCLA = this.$el.find("#cla-select");
+
+            if (
+                btnComparar.length &&
+                selectOficina.length &&
+                selectCLA.length
+            ) {
+                btnComparar.off("click").on("click", function () {
+                    const oficinaId = selectOficina.val();
+                    const claId = selectCLA.val();
+
+                    if (!oficinaId) {
+                        Espo.Ui.warning("Por favor, selecciona una oficina");
+                        return;
+                    }
+
+                    self.guardarFiltrosActuales();
+
+                    self.getRouter().navigate(
+                        "#Principal/asesores/" + oficinaId,
+                        { trigger: true }
+                    );
+                });
+            }
+        },
+
+        guardarFiltrosActuales: function () {
+            const selectCLA = this.$el.find("#cla-select");
+            const selectOficina = this.$el.find("#oficina-select");
+            const selectAsesor = this.$el.find("#asesor-select");
+
+            this.filtrosGuardados = {
+                cla: selectCLA.val(),
+                oficina: selectOficina.val(),
+                asesor: selectAsesor.val(),
+                timestamp: Date.now(),
             };
 
-            // Configurar eventos para ambos botones
-            setTimeout(function () {
-                var btn1 = document.getElementById("cerrar-ventana-btn");
-                var btn2 = document.getElementById("cerrar-ventana-btn2");
-
-                if (btn1) {
-                    btn1.onclick = cerrarVentana;
-                }
-
-                if (btn2) {
-                    btn2.onclick = cerrarVentana;
-                }
-
-                // También permitir cerrar con la tecla ESC
-                document.addEventListener("keydown", function (event) {
-                    if (event.key === "Escape") {
-                        cerrarVentana();
-                    }
-                });
-            }, 100);
-        },
-
-        mostrarComparacionAsesores: function () {
-            var oficinaId = this.filtrosCLAManager.filtros.oficina;
-            var oficinaNombre = this.$el
-                .find("#oficina-select option:selected")
-                .text();
-            var claId = this.filtrosCLAManager.filtros.cla;
-
-            if (!oficinaId) {
-                Espo.Ui.error("Por favor seleccione una oficina primero");
-                return;
-            }
-
-            // Navegar a nueva URL
-            this.getRouter().navigate(
-                "#CCustomerSurvey/comparacion-asesores?oficina=" +
-                    oficinaId +
-                    "&cla=" +
-                    claId +
-                    "&nombre=" +
-                    encodeURIComponent(oficinaNombre),
-                { trigger: true }
+            sessionStorage.setItem(
+                "filtrosPrincipal",
+                JSON.stringify(this.filtrosGuardados)
             );
         },
 
-        /* mostrarComparacionOficinas: function () {
-            console.log("🔍 DEBUG: Iniciando mostrarComparacionOficinas");
-
-            var claId = this.filtrosCLAManager.filtros.cla;
-            var claNombre = this.$el.find("#cla-select option:selected").text();
-
-            if (!claId) {
-                Espo.Ui.error("Por favor seleccione un CLA primero");
-                return;
-            }
-
-            // Guardar estado
-            this.guardarEstadoFiltros();
-
-            // ✅ SIMPLIFICADO: Solo navegar
-            let url = `#reportes-calidad-servicio/comparacion-oficinas?cla=${claId}&nombre=${encodeURIComponent(
-                claNombre
-            )}`;
-
-            this.getRouter().navigate(url, { trigger: true });
-        }, */
-
-        mostrarComparacionOficinas: function () {
-            console.log("🔍 DEBUG: Iniciando mostrarComparacionOficinas");
-
-            var claId = this.filtrosCLAManager.filtros.cla;
-            var claNombre = this.$el.find("#cla-select option:selected").text();
-
-            if (!claId) {
-                Espo.Ui.error("Por favor seleccione un CLA primero");
-                return;
-            }
-
-            // USAR EXACTAMENTE EL MISMO PATRÓN QUE COMPETENCIAS
-            const params = `cla=${claId}&nombre=${encodeURIComponent(
-                claNombre
-            )}`;
-
-            console.log(
-                "🔗 Navegando como Competencias:",
-                `#reportes-calidad-servicio/comparacionOficinas?${params}`
-            );
-
-            // Método 1: Igual que Competencias
-            this.getRouter().navigate(
-                `#reportes-calidad-servicio/comparacionOficinas?${params}`,
-                { trigger: true }
-            );
-
-            // Método 2 alternativo: Probar con CCustomerSurvey como tienes en otras rutas
-            // this.getRouter().navigate(`#CCustomerSurvey/comparacion-oficinas?${params}`, {trigger: true});
-        },
-
-        // ✅ NUEVO: Guardar estado de filtros para restaurar al volver
-        guardarEstadoFiltros: function () {
-            var filtros = this.filtrosCLAManager.getFiltros();
-
+        cargarFiltrosGuardados: function () {
             try {
-                // Guardar en localStorage para persistir entre sesiones
-                localStorage.setItem(
-                    "calidadServicio_filtros",
-                    JSON.stringify({
-                        cla: filtros.cla,
-                        oficina: filtros.oficina,
-                        asesor: filtros.asesor,
-                    })
-                );
-            } catch (e) {
-                console.warn("No se pudo guardar el estado de los filtros:", e);
-            }
-        },
-
-        // ✅ NUEVO: Restaurar estado de filtros al cargar la página
-        restaurarEstadoFiltros: function () {
-            try {
-                var filtrosGuardados = localStorage.getItem(
-                    "calidadServicio_filtros"
-                );
-
+                const filtrosGuardados =
+                    sessionStorage.getItem("filtrosPrincipal");
                 if (filtrosGuardados) {
-                    var filtros = JSON.parse(filtrosGuardados);
-
-                    // Restaurar en los selects si existen
-                    if (filtros.cla && this.$el.find("#cla-select").length) {
-                        this.$el.find("#cla-select").val(filtros.cla);
-                    }
-
-                    // Los cambios en los selects dispararán las actualizaciones automáticamente
+                    this.filtrosGuardados = JSON.parse(filtrosGuardados);
                     return true;
                 }
-            } catch (e) {
-                console.warn(
-                    "No se pudo restaurar el estado de los filtros:",
-                    e
-                );
-            }
-
+            } catch (error) {}
             return false;
-        },
-
-        restaurarFiltrosDesdeURL: function () {
-            var urlParams = new URLSearchParams(
-                window.location.hash.split("?")[1] || ""
-            );
-            var claId = urlParams.get("cla");
-            var oficinaId = urlParams.get("oficina");
-
-            if (claId || oficinaId) {
-                setTimeout(
-                    function () {
-                        if (claId) {
-                            this.$el
-                                .find("#cla-select")
-                                .val(claId)
-                                .trigger("change");
-
-                            // Si hay oficina, esperar a que cargue las oficinas
-                            if (oficinaId) {
-                                setTimeout(
-                                    function () {
-                                        this.$el
-                                            .find("#oficina-select")
-                                            .val(oficinaId)
-                                            .trigger("change");
-                                    }.bind(this),
-                                    800
-                                );
-                            }
-                        }
-                    }.bind(this),
-                    500
-                );
-            } else {
-                // Si no hay parámetros en la URL, intentar restaurar de localStorage
-                this.restaurarEstadoFiltros();
-            }
         },
 
         initMappings: function () {

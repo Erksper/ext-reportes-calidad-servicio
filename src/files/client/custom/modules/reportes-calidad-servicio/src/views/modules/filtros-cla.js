@@ -4,6 +4,7 @@ define("reportes-calidad-servicio:views/modules/filtros-cla", [], function () {
         this.filtros = {
             cla: null,
             oficina: null,
+            asesor: null,
             mostrarTodas: true,
         };
         this.allTeams = {
@@ -31,8 +32,7 @@ define("reportes-calidad-servicio:views/modules/filtros-cla", [], function () {
                     function () {
                         this.procesarTeams(collection);
                         this.populateCLASelect();
-
-                        this.view.estadisticasManager.loadStatistics();
+                        this.cargarCLAInicial();
                     }.bind(this)
                 );
             }.bind(this)
@@ -66,40 +66,30 @@ define("reportes-calidad-servicio:views/modules/filtros-cla", [], function () {
         claSelect.empty();
 
         var permisos = this.view.permisosManager.getPermisos();
-        var clasDisponibles = this.allTeams.clas;
 
-        if (!permisos.esAdministrativo && !permisos.esCasaNacional) {
-            if (permisos.claUsuario) {
-                clasDisponibles = clasDisponibles.filter(function (cla) {
-                    return cla.id === permisos.claUsuario;
-                });
-            } else {
-                clasDisponibles = [];
-            }
-        }
+        claSelect.append(
+            $("<option></option>").val("CLA0").text("Territorio Nacional")
+        );
 
-        var cla0 = clasDisponibles.find(function (cla) {
-            return cla.id === "CLA0";
-        });
+        var clasDisponibles = [];
 
-        if (cla0) {
-            claSelect.append(
-                $("<option></option>")
-                    .val("")
-                    .text("Territorio Nacional")
-                    .prop("selected", true)
-            );
-
-            clasDisponibles = clasDisponibles.filter(function (cla) {
+        if (
+            permisos.esAdministrativo ||
+            permisos.esCasaNacional ||
+            permisos.esGerente ||
+            permisos.esDirector ||
+            permisos.esCoordinador ||
+            permisos.esAfiliado
+        ) {
+            clasDisponibles = this.allTeams.clas.filter(function (cla) {
                 return cla.id !== "CLA0";
             });
-        } else {
-            claSelect.append(
-                $("<option></option>")
-                    .val("")
-                    .text("Territorio Nacional")
-                    .prop("selected", true)
-            );
+        } else if (permisos.esAsesorRegular) {
+            if (permisos.claUsuario) {
+                clasDisponibles = this.allTeams.clas.filter(function (cla) {
+                    return cla.id === permisos.claUsuario;
+                });
+            }
         }
 
         clasDisponibles.sort(function (a, b) {
@@ -110,6 +100,7 @@ define("reportes-calidad-servicio:views/modules/filtros-cla", [], function () {
             claSelect.append($("<option></option>").val(cla.id).text(cla.name));
         });
 
+        claSelect.val("CLA0");
         claSelect.prop("disabled", false);
     };
 
@@ -127,7 +118,8 @@ define("reportes-calidad-servicio:views/modules/filtros-cla", [], function () {
                     this.filtros.cla = claId || null;
                     this.filtros.oficina = null;
                     this.filtros.asesor = null;
-                    this.filtros.mostrarTodas = !claId;
+
+                    this.filtros.mostrarTodas = !claId || claId === "CLA0";
 
                     var btnComparacionOficinas = this.view.$el.find(
                         "#btn-comparar-oficinas"
@@ -135,12 +127,19 @@ define("reportes-calidad-servicio:views/modules/filtros-cla", [], function () {
                     var btnComparacionAsesores = this.view.$el.find(
                         "#btn-comparar-asesores"
                     );
-
                     var oficinaSelect = this.view.$el.find("#oficina-select");
-                    oficinaSelect.val("");
+                    var asesorSelect = this.view.$el.find("#asesor-select");
 
-                    if (claId) {
-                        btnComparacionOficinas.show();
+                    oficinaSelect.val("");
+                    asesorSelect.val("");
+
+                    var permisos = this.view.permisosManager.getPermisos();
+
+                    if (claId && claId !== "CLA0") {
+                        btnComparacionOficinas
+                            .show()
+                            .css("display", "inline-flex");
+
                         if (
                             this.view.filtrosOficinasManager &&
                             this.view.filtrosOficinasManager.loadOficinas
@@ -151,20 +150,86 @@ define("reportes-calidad-servicio:views/modules/filtros-cla", [], function () {
                         }
                     } else {
                         btnComparacionOficinas.hide();
+
                         oficinaSelect.empty();
                         oficinaSelect.append(
                             '<option value="">Seleccione un CLA primero</option>'
                         );
                         oficinaSelect.prop("disabled", true);
                     }
+
                     btnComparacionAsesores.hide();
+
+                    if (this.view.filtrosAsesoresManager) {
+                        this.view.filtrosAsesoresManager.limpiarFiltros();
+                    }
+
                     this.view.estadisticasManager.loadStatistics();
                 }.bind(this)
             );
         }
+
+        this.setupComparacionOficinas();
     };
+
+    FiltrosCLAManager.prototype.setupComparacionOficinas = function () {
+        var self = this;
+        var btnComparar = this.view.$el.find("#btn-comparar-oficinas");
+        var selectCLA = this.view.$el.find("#cla-select");
+
+        btnComparar.off("click").on("click", function () {
+            var claId = selectCLA.val();
+            var claNombre = selectCLA.find("option:selected").text();
+
+            if (!claId || claId === "CLA0" || claId === "") {
+                Espo.Ui.warning(
+                    "Por favor, selecciona un CLA específico (no Territorio Nacional)"
+                );
+                return;
+            }
+
+            self.view.filtrosGuardados = {
+                cla: claId,
+                oficina: self.view.$el.find("#oficina-select").val(),
+                asesor: self.view.$el.find("#asesor-select").val(),
+            };
+
+            self.view
+                .getRouter()
+                .navigate("#Oficinas/" + claId, { trigger: true });
+        });
+    };
+
     FiltrosCLAManager.prototype.getFiltros = function () {
         return this.filtros;
+    };
+
+    FiltrosCLAManager.prototype.cargarCLAInicial = function () {
+        var permisos = this.view.permisosManager.getPermisos();
+
+        if (!permisos.permisosListo) {
+            setTimeout(
+                function () {
+                    this.cargarCLAInicial();
+                }.bind(this),
+                200
+            );
+            return;
+        }
+
+        var claSelect = this.view.$el.find("#cla-select");
+
+        if (!claSelect.length) {
+            return;
+        }
+
+        if (claSelect.find('option[value="CLA0"]').length > 0) {
+            claSelect.val("CLA0");
+
+            setTimeout(function () {
+                claSelect.trigger("change");
+            }, 500);
+        }
     };
 
     return FiltrosCLAManager;

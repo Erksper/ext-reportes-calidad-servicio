@@ -15,6 +15,21 @@ define("reportes-calidad-servicio:views/modules/filtros-oficinas", [], function 
 
         var permisos = this.view.permisosManager.getPermisos();
 
+        if (permisos.esAsesorRegular) {
+            if (permisos.oficinaUsuario) {
+                this.cargarOficinaEspecifica(
+                    permisos.oficinaUsuario,
+                    oficinaSelect
+                );
+            } else {
+                oficinaSelect.html(
+                    '<option value="">No tienes oficina asignada</option>'
+                );
+                oficinaSelect.prop("disabled", true);
+            }
+            return;
+        }
+
         if (!permisos.esAdministrativo && !permisos.esCasaNacional) {
             if (permisos.oficinaUsuario) {
                 this.cargarOficinaEspecifica(
@@ -31,58 +46,86 @@ define("reportes-calidad-servicio:views/modules/filtros-oficinas", [], function 
     FiltrosOficinasManager.prototype.cargarOficinasPorCLA = function (claId) {
         var oficinaSelect = this.view.$el.find("#oficina-select");
 
-        return Promise.all([
-            this.fetchAllTeams(),
-            this.fetchUsuariosPorCLA(claId),
-        ])
+        if (!oficinaSelect.length) {
+            return;
+        }
+
+        oficinaSelect.html('<option value="">Cargando oficinas...</option>');
+        oficinaSelect.prop("disabled", true);
+
+        var permisos = this.view.permisosManager.getPermisos();
+
+        if (permisos.esAsesorRegular) {
+            if (permisos.oficinaUsuario) {
+                this.cargarOficinaEspecifica(
+                    permisos.oficinaUsuario,
+                    oficinaSelect
+                );
+            } else {
+                oficinaSelect.html(
+                    '<option value="">No tienes oficina asignada</option>'
+                );
+                oficinaSelect.prop("disabled", true);
+            }
+            return;
+        }
+
+        Espo.Ajax.getRequest("CCustomerSurvey/action/getOficinasByCLA", {
+            claId: claId,
+        })
             .then(
-                function (results) {
-                    var teams = results[0];
-                    var usuariosConCLA = results[1];
+                function (response) {
+                    if (response && response.success && response.data) {
+                        var oficinas = response.data;
 
-                    var claPattern = /^CLA\d+$/i;
-                    var oficinasIds = new Set();
-
-                    usuariosConCLA.forEach(function (usuario) {
-                        var teamsIds = usuario.teamsIds || [];
-                        teamsIds.forEach(function (teamId) {
-                            // ✅ FILTRAR: Excluir CLAs y venezuela (case insensitive)
-                            if (
-                                !claPattern.test(teamId) &&
-                                teamId.toLowerCase() !== "venezuela"
-                            ) {
-                                oficinasIds.add(teamId);
-                            }
+                        oficinas = oficinas.filter(function (oficina) {
+                            return (
+                                oficina.id.toLowerCase() !== "venezuela" &&
+                                (oficina.name || "").toLowerCase() !==
+                                    "venezuela"
+                            );
                         });
-                    });
 
-                    var oficinas = teams.filter(function (t) {
-                        // ✅ DOBLE FILTRO: Por ID en el set y excluir venezuela por nombre
-                        return (
-                            oficinasIds.has(t.id) &&
-                            t.id.toLowerCase() !== "venezuela" &&
-                            (t.name || "").toLowerCase() !== "venezuela"
-                        );
-                    });
+                        oficinas.sort(function (a, b) {
+                            return (a.name || "").localeCompare(b.name || "");
+                        });
 
-                    oficinas.sort(function (a, b) {
-                        return (a.name || "").localeCompare(b.name || "");
-                    });
-
-                    oficinaSelect.html(
-                        '<option value="">Todas las oficinas</option>'
-                    );
-                    oficinas.forEach(function (oficina) {
+                        oficinaSelect.empty();
                         oficinaSelect.append(
-                            '<option value="' +
-                                oficina.id +
-                                '">' +
-                                (oficina.name || oficina.id) +
-                                "</option>"
+                            '<option value="">Todas las oficinas</option>'
                         );
-                    });
 
-                    oficinaSelect.prop("disabled", false);
+                        oficinas.forEach(function (oficina) {
+                            oficinaSelect.append(
+                                '<option value="' +
+                                    oficina.id +
+                                    '">' +
+                                    (oficina.name || oficina.id) +
+                                    "</option>"
+                            );
+                        });
+
+                        oficinaSelect.prop("disabled", false);
+
+                        if (
+                            this.view.filtrosGuardados &&
+                            this.view.filtrosGuardados.oficina
+                        ) {
+                            setTimeout(
+                                function () {
+                                    oficinaSelect
+                                        .val(this.view.filtrosGuardados.oficina)
+                                        .trigger("change");
+                                }.bind(this),
+                                100
+                            );
+                        }
+                    } else {
+                        oficinaSelect.html(
+                            '<option value="">No hay oficinas disponibles</option>'
+                        );
+                        oficinaSelect.prop("disabled", false);
+                    }
                 }.bind(this)
             )
             .catch(function (error) {
@@ -118,7 +161,6 @@ define("reportes-calidad-servicio:views/modules/filtros-oficinas", [], function 
                                                     };
                                                 })
                                                 .filter(function (team) {
-                                                    // ✅ FILTRAR: Excluir venezuela (case insensitive)
                                                     return (
                                                         team.id.toLowerCase() !==
                                                             "venezuela" &&
@@ -149,58 +191,39 @@ define("reportes-calidad-servicio:views/modules/filtros-oficinas", [], function 
             }.bind(this)
         );
     };
+
     FiltrosOficinasManager.prototype.fetchUsuariosPorCLA = function (claId) {
         return new Promise(
             function (resolve, reject) {
-                var maxSize = 200;
-                var allUsers = [];
+                Espo.Ajax.getRequest(
+                    "CCustomerSurvey/action/getOficinasByCLA",
+                    {
+                        claId: claId,
+                    }
+                )
+                    .then(
+                        function (response) {
+                            if (response && response.success) {
+                                var oficinas = response.data || [];
 
-                var fetchPage = function (offset) {
-                    this.view.getCollectionFactory().create(
-                        "User",
-                        function (collection) {
-                            collection.maxSize = maxSize;
-                            collection.offset = offset;
-                            collection.data = { select: "teamsIds,teamsNames" };
+                                oficinas = oficinas.filter(function (oficina) {
+                                    return (
+                                        oficina.id.toLowerCase() !==
+                                            "venezuela" &&
+                                        (oficina.name || "").toLowerCase() !==
+                                            "venezuela"
+                                    );
+                                });
 
-                            collection
-                                .fetch()
-                                .then(
-                                    function () {
-                                        var models = collection.models || [];
-                                        var filtered = models
-                                            .filter(function (u) {
-                                                var teamsIds =
-                                                    u.get("teamsIds") || [];
-                                                return teamsIds.includes(claId);
-                                            })
-                                            .map(function (m) {
-                                                return {
-                                                    id: m.id,
-                                                    teamsIds: m.get("teamsIds"),
-                                                    teamsNames:
-                                                        m.get("teamsNames"),
-                                                };
-                                            });
-
-                                        allUsers = allUsers.concat(filtered);
-
-                                        if (
-                                            models.length === maxSize &&
-                                            offset + maxSize < collection.total
-                                        ) {
-                                            fetchPage(offset + maxSize);
-                                        } else {
-                                            resolve(allUsers);
-                                        }
-                                    }.bind(this)
-                                )
-                                .catch(reject);
+                                resolve(oficinas);
+                            } else {
+                                resolve([]);
+                            }
                         }.bind(this)
-                    );
-                }.bind(this);
-
-                fetchPage(0);
+                    )
+                    .catch(function (error) {
+                        resolve([]);
+                    });
             }.bind(this)
         );
     };
@@ -231,19 +254,27 @@ define("reportes-calidad-servicio:views/modules/filtros-oficinas", [], function 
                                     "</option>"
                             );
                             oficinaSelect.val(oficina.id);
-                            oficinaSelect.prop("disabled", true);
+                            oficinaSelect.prop("disabled", false);
 
-                            this.view.filtrosCLAManager.filtros.oficina =
-                                oficina.id;
-                            this.view.filtrosCLAManager.filtros.mostrarTodas = false;
+                            if (this.view.filtrosCLAManager) {
+                                this.view.filtrosCLAManager.filtros.oficina =
+                                    oficina.id;
+                                this.view.filtrosCLAManager.filtros.mostrarTodas = false;
+                            }
+
+                            if (this.view.filtrosAsesoresManager) {
+                                this.view.filtrosAsesoresManager.loadAsesores(
+                                    oficina.id
+                                );
+                            }
                         }.bind(this)
                     )
                     .catch(
                         function (error) {
                             oficinaSelect.html(
-                                '<option value="">Error al cargar</option>'
+                                '<option value="">Error al cargar oficina</option>'
                             );
-                            oficinaSelect.prop("disabled", false);
+                            oficinaSelect.prop("disabled", true);
                         }.bind(this)
                     );
             }.bind(this)
@@ -289,6 +320,8 @@ define("reportes-calidad-servicio:views/modules/filtros-oficinas", [], function 
                 "change",
                 function (e) {
                     var oficinaId = $(e.currentTarget).val();
+                    var selectCLA = this.view.$el.find("#cla-select");
+                    var claSeleccionado = selectCLA.val();
 
                     var btnComparacionAsesores = this.view.$el.find(
                         "#btn-comparar-asesores"
@@ -297,9 +330,17 @@ define("reportes-calidad-servicio:views/modules/filtros-oficinas", [], function 
                         "#btn-comparar-oficinas"
                     );
 
-                    if (oficinaId) {
-                        btnComparacionAsesores.show();
-                        btnComparacionOficinas.show(); // Mantener visible
+                    if (
+                        oficinaId &&
+                        claSeleccionado !== "CLA0" &&
+                        claSeleccionado !== ""
+                    ) {
+                        btnComparacionAsesores
+                            .show()
+                            .css("display", "inline-flex");
+                        btnComparacionOficinas
+                            .show()
+                            .css("display", "inline-flex");
                     } else {
                         btnComparacionAsesores.hide();
                     }
@@ -321,13 +362,54 @@ define("reportes-calidad-servicio:views/modules/filtros-oficinas", [], function 
                             this.view.filtrosAsesoresManager.limpiarFiltros();
                         }
 
-                        if (this.view.estadisticasManager) {
+                        var permisos = this.view.permisosManager.getPermisos();
+                        if (
+                            !permisos.esAsesorRegular &&
+                            this.view.estadisticasManager
+                        ) {
                             this.view.estadisticasManager.loadStatistics();
                         }
                     }
                 }.bind(this)
             );
         }
+
+        this.setupComparacionAsesores();
+    };
+
+    FiltrosOficinasManager.prototype.setupComparacionAsesores = function () {
+        var self = this;
+        var btnComparar = this.view.$el.find("#btn-comparar-asesores");
+        var selectOficina = this.view.$el.find("#oficina-select");
+        var selectCLA = this.view.$el.find("#cla-select");
+
+        btnComparar.off("click").on("click", function () {
+            var oficinaId = selectOficina.val();
+            var oficinaNombre = selectOficina.find("option:selected").text();
+            var claSeleccionado = selectCLA.val();
+
+            if (!oficinaId) {
+                Espo.Ui.warning("Por favor, selecciona una oficina");
+                return;
+            }
+
+            if (claSeleccionado === "CLA0" || claSeleccionado === "") {
+                Espo.Ui.warning(
+                    "No puedes comparar asesores con Territorio Nacional seleccionado"
+                );
+                return;
+            }
+
+            try {
+                self.view
+                    .getRouter()
+                    .navigate("#Principal/asesores/" + oficinaId, {
+                        trigger: true,
+                    });
+            } catch (error) {
+                window.location.hash = "#Principal/asesores/" + oficinaId;
+            }
+        });
     };
 
     FiltrosOficinasManager.prototype.limpiarFiltros = function () {

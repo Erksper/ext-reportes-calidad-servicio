@@ -1,26 +1,4 @@
 {
     "controller": "reportes-calidad-servicio:controllers/principal",
-    "iconClass": "fas fa-flask",
-    "color": "#27ae60",
-    "views": {
-        "list": "reportes-calidad-servicio:views/prueba",
-        "detail": "reportes-calidad-servicio:views/prueba"
-    },
-    "menu": {
-        "list": [
-            {
-                "label": "Dashboard",
-                "link": "#reportes-calidad-servicio",
-                "acl": "read",
-                "iconClass": "fas fa-home"
-            },
-            {
-                "label": "Prueba",
-                "link": "#Prueba",
-                "acl": "read",
-                "iconClass": "fas fa-flask"
-            }
-        ]
-    },
     "checkForDuplicatesInQuickCreate": false
 }

@@ -7,7 +7,6 @@
             </h3>
         </div>
     </div>
-
     <div class="filter-section panel panel-default">
         <div class="panel-body">
             <div class="filters-container">
@@ -33,21 +32,6 @@
             
             <!-- ✅ NUEVO: Botones de comparación -->
             <div class="comparison-buttons" style="margin-top: 20px; display: flex; gap: 15px; flex-wrap: wrap;">
-                <button id="btn-comparar-asesores" class="btn-comparison" style="
-                    display: none;
-                    background: linear-gradient(135deg, #B8A279 0%, #D4C19C 100%);
-                    color: white;
-                    border: none;
-                    padding: 12px 24px;
-                    border-radius: 6px;
-                    font-weight: 600;
-                    cursor: pointer;
-                    transition: all 0.3s ease;
-                    box-shadow: 0 2px 8px rgba(184, 162, 121, 0.3);
-                " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(184, 162, 121, 0.4)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(184, 162, 121, 0.3)';">
-                    <i class="fas fa-chart-bar"></i> Comparar Asesores de la Oficina
-                </button>
-                
                 <button id="btn-comparar-oficinas" class="btn-comparison" style="
                     display: none;
                     background: linear-gradient(135deg, #666666 0%, #999999 100%);
@@ -62,12 +46,27 @@
                 " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(102, 102, 102, 0.4)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(102, 102, 102, 0.3)';">
                     <i class="fas fa-building"></i> Comparar Oficinas del CLA
                 </button>
+
+                <button id="btn-comparar-asesores" class="btn-comparison" style="
+                    display: none;
+                    background: linear-gradient(135deg, #B8A279 0%, #D4C19C 100%);
+                    color: white;
+                    border: none;
+                    padding: 12px 24px;
+                    border-radius: 6px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    box-shadow: 0 2px 8px rgba(184, 162, 121, 0.3);
+                " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(184, 162, 121, 0.4)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(184, 162, 121, 0.3)';">
+                    <i class="fas fa-chart-bar"></i> Comparar Asesores de la Oficina
+                </button>
             </div>
         </div>
     </div>
-    
+
     {{#if esAdmin}}
-    <div class="file-input-section panel panel-default">
+    <div class="file-input-section panel panel-default admin-only">
         <div class="panel-body">
             <div class="file-input-group">
                 <label class="file-input-label" for="csv-file-input">
@@ -109,6 +108,7 @@
         </div>
     </div>
     {{/if}}
+    
 
     <div id="dynamic-content-container">
         <!-- Contenido dinámico -->
@@ -584,6 +584,80 @@ BOTON DE IMPORT Y REFRESCAR
     font-size: 4em;
     color: #bdc3c7;
     margin-bottom: 20px;
+}
+
+/* Separación de iconos en títulos */
+.page-header h3 .fas,
+.page-header h3 .far {
+    margin-right: 12px !important;
+}
+
+.info-title .fas,
+.info-title .far {
+    margin-right: 10px !important;
+}
+
+.titulo-seccion .fas,
+.titulo-seccion .far {
+    margin-right: 12px !important;
+}
+
+.grafico-titulo .fas,
+.grafico-titulo .far {
+    margin-right: 10px !important;
+}
+
+h1 .fas,
+h1 .far,
+h2 .fas,
+h2 .far,
+h3 .fas,
+h3 .far {
+    margin-right: 10px !important;
+}
+
+p .fas,
+p .far {
+    margin-right: 8px !important;
+}
+
+/* ===================================
+   Efecto hover mejorado para botones de comparación 
+   =================================== */
+
+.btn-comparison {
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-comparison::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.2);
+    transition: left 0.3s ease;
+}
+
+.btn-comparison:hover::before {
+    left: 100%;
+}
+
+.btn-comparison:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25) !important;
+    filter: brightness(1.1);
+}
+
+#btn-comparar-oficinas:hover {
+    background: linear-gradient(135deg, #555555 0%, #888888 100%) !important;
+}
+
+#btn-comparar-asesores:hover {
+    background: linear-gradient(135deg, #A89968 0%, #C9B88A 100%) !important;
 }
 
 /* ===================================
