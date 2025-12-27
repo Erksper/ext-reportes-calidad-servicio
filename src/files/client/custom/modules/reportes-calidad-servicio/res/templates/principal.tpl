@@ -31,36 +31,13 @@
             </div>
             
             <!-- ✅ NUEVO: Botones de comparación -->
-            <div class="comparison-buttons" style="margin-top: 20px; display: flex; gap: 15px; flex-wrap: wrap;">
-                <button id="btn-comparar-oficinas" class="btn-comparison" style="
-                    display: none;
-                    background: linear-gradient(135deg, #666666 0%, #999999 100%);
-                    color: white;
-                    border: none;
-                    padding: 12px 24px;
-                    border-radius: 6px;
-                    font-weight: 600;
-                    cursor: pointer;
-                    transition: all 0.3s ease;
-                    box-shadow: 0 2px 8px rgba(102, 102, 102, 0.3);
-                " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(102, 102, 102, 0.4)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(102, 102, 102, 0.3)';">
-                    <i class="fas fa-building"></i> Comparar Oficinas del CLA
-                </button>
+            <button id="btn-comparar-oficinas" class="btn-comparison btn-comparison-oficinas" style="display: none;">
+                <i class="fas fa-building"></i> Comparar Oficinas del CLA
+            </button>
 
-                <button id="btn-comparar-asesores" class="btn-comparison" style="
-                    display: none;
-                    background: linear-gradient(135deg, #B8A279 0%, #D4C19C 100%);
-                    color: white;
-                    border: none;
-                    padding: 12px 24px;
-                    border-radius: 6px;
-                    font-weight: 600;
-                    cursor: pointer;
-                    transition: all 0.3s ease;
-                    box-shadow: 0 2px 8px rgba(184, 162, 121, 0.3);
-                " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(184, 162, 121, 0.4)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(184, 162, 121, 0.3)';">
-                    <i class="fas fa-chart-bar"></i> Comparar Asesores de la Oficina
-                </button>
+            <button id="btn-comparar-asesores" class="btn-comparison btn-comparison-asesores" style="display: none;">
+                <i class="fas fa-chart-bar"></i> Comparar Asesores de la Oficina
+            </button>
             </div>
         </div>
     </div>
@@ -204,7 +181,7 @@ BOTON DE IMPORT Y REFRESCAR
 .calidad-servicio-principal {
     padding: 20px;
     background: #f5f5f5;
-    min-height: 100vh;
+    min-height: 10vh;
 }
 
 .page-header {
@@ -626,9 +603,22 @@ p .far {
    =================================== */
 
 .btn-comparison {
+    background: linear-gradient(135deg, #666666 0%, #999999 100%);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
     transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(102, 102, 102, 0.3);
     position: relative;
     overflow: hidden;
+}
+
+.btn-comparison-asesores {
+    background: linear-gradient(135deg, #B8A279 0%, #D4C19C 100%);
+    box-shadow: 0 2px 8px rgba(184, 162, 121, 0.3);
 }
 
 .btn-comparison::before {
@@ -652,12 +642,17 @@ p .far {
     filter: brightness(1.1);
 }
 
-#btn-comparar-oficinas:hover {
+.btn-comparison:active {
+    transform: translateY(-1px);
+}
+
+.btn-comparison-oficinas:hover {
     background: linear-gradient(135deg, #555555 0%, #888888 100%) !important;
 }
 
-#btn-comparar-asesores:hover {
+.btn-comparison-asesores:hover {
     background: linear-gradient(135deg, #A89968 0%, #C9B88A 100%) !important;
+    box-shadow: 0 6px 20px rgba(184, 162, 121, 0.3) !important;
 }
 
 /* ===================================

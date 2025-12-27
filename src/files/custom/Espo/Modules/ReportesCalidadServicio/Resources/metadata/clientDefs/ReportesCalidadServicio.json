@@ -6,14 +6,14 @@
         "list": [
             {
                 "label": "Principal",
-                "link": "#ReportesCalidadServicio/principal",
+                "link": "#Principal",
                 "acl": "read",
                 "aclScope": "ReportesCalidadServicio",
                 "iconClass": "fas fa-home"
             },
             {
                 "label": "Lista",
-                "link": "#ReportesCalidadServicio",
+                "link": "#Lista",
                 "acl": "read",
                 "aclScope": "ReportesCalidadServicio",
                 "iconClass": "fas fa-list"

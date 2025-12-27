@@ -30,6 +30,21 @@
                 "action": "estadisticasAsesor",
                 "asesorId": ":asesorId"
             }
+        },
+        {
+            "route": "Lista",
+            "params": {
+                "controller": "lista",
+                "action": "index"
+            }
+        },
+        {
+            "route": "Lista/detalle/:surveyId",
+            "params": {
+                "controller": "lista",
+                "action": "detalle",
+                "surveyId": ":surveyId"
+            }
         }
     ]
 }

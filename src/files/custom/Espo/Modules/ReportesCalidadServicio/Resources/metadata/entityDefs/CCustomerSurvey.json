@@ -408,6 +408,16 @@
         "url": {
             "type": "url",
             "isCustom": true
+        },
+        "reenvios": {
+            "type": "int",
+            "default": 0,
+            "min": 0,
+            "isCustom": true
+        },
+        "ultimoReenvio": {
+            "type": "datetime",
+            "isCustom": true
         }
     },
     "links": {
