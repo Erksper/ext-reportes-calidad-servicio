@@ -1,0 +1,11 @@
+{
+    "links": {
+        "cCustomerSurveies": {
+            "type": "hasMany",
+            "foreign": "contact",
+            "entity": "CCustomerSurvey",
+            "audited": false,
+            "isCustom": true
+        }
+    }
+}

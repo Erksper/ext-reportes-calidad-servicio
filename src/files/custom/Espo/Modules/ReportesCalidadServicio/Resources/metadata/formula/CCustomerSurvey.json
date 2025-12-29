@@ -1,0 +1,3 @@
+{
+    "beforeSaveCustomScript": "name=number;\nurl=string\\concatenate('https://portal.century21venezuela.com/survey/?id=', id);"
+}

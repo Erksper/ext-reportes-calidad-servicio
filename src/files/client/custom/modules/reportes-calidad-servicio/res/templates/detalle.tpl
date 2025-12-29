@@ -15,6 +15,14 @@
                             </p>
                         </div>
                     </div>
+                    <div class="header-actions">
+                        <button class="btn btn-volver" data-action="volver">
+                            <i class="fas fa-arrow-left me-2"></i> Volver a Lista
+                        </button>
+                        <button class="btn btn-workflow" data-action="ejecutar-workflow" style="display: none;">
+                            <i class="fas fa-play me-2"></i> Ejecutar Workflow
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -93,6 +101,112 @@
     color: #B8A279;
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(184, 162, 121, 0.15);
+}
+
+.btn-workflow {
+    background: #f39c12;
+    color: white;
+    border: 2px solid #f39c12;
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    margin-left: 10px;
+}
+
+.btn-workflow:hover {
+    background: #e67e22;
+    border-color: #e67e22;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(243, 156, 18, 0.3);
+}
+
+/* Estilos para campo editable */
+.campo-editable {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.campo-editable input {
+    padding: 8px 12px;
+    border: 2px solid #E6E6E6;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.campo-editable input:focus {
+    border-color: #B8A279;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(184, 162, 121, 0.1);
+}
+
+.campo-editable input:disabled {
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: #1A1A1A;
+}
+
+.btn-editar,
+.btn-guardar {
+    background: #B8A279;
+    color: white;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-editar:hover,
+.btn-guardar:hover {
+    background: #9D8B5F;
+    transform: scale(1.1);
+}
+
+.url-field {
+    background: #F5F5F5;
+    padding: 12px 15px;
+    border-radius: 6px;
+    border-left: 3px solid #B8A279;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.url-text {
+    flex: 1;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    color: #363438;
+    word-break: break-all;
+}
+
+.btn-copiar {
+    background: #B8A279;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    font-size: 13px;
+}
+
+.btn-copiar:hover {
+    background: #9D8B5F;
+    transform: scale(1.05);
 }
 
 /* Cards de información */

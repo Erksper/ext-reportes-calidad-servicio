@@ -1,0 +1,28 @@
+{
+    "fields": {
+        "contactMedium": {
+            "visible": null,
+            "required": null
+        },
+        "contactMediumOther": {
+            "visible": {
+                "conditionGroup": [
+                    {
+                        "type": "has",
+                        "attribute": "contactMedium",
+                        "value": "9"
+                    }
+                ]
+            },
+            "required": {
+                "conditionGroup": [
+                    {
+                        "type": "has",
+                        "attribute": "contactMedium",
+                        "value": "9"
+                    }
+                ]
+            }
+        }
+    }
+}

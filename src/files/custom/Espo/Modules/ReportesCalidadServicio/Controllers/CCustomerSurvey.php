@@ -5,7 +5,7 @@ use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Error;
 use Espo\Core\Exceptions\Forbidden;
 
-class CCustomerSurvey extends \Espo\Core\Controllers\Base
+class CCustomerSurvey extends \Espo\Core\Controllers\Record
 {
     
     protected function getUserFullInfo($userId)
@@ -123,6 +123,56 @@ class CCustomerSurvey extends \Espo\Core\Controllers\Base
         } catch (\Exception $e) {
             $GLOBALS['log']->error('Error en getUserFullInfo: ' . $e->getMessage());
             return null;
+        }
+    }
+
+    public function postActionActualizarTelefono($params, $data, $request)
+    {
+        try {
+            if (!$request->isPost()) {
+                throw new BadRequest("Método no permitido");
+            }
+            
+            $data = $request->getParsedBody();
+            if (is_object($data)) {
+                $data = (array) $data;
+            }
+            
+            $surveyId = $data['surveyId'] ?? null;
+            $phoneNumber = $data['phoneNumber'] ?? null;
+            
+            if (!$surveyId) {
+                return [
+                    'success' => false,
+                    'error' => 'ID de encuesta no proporcionado'
+                ];
+            }
+            
+            $entityManager = $this->getContainer()->get('entityManager');
+            $encuesta = $entityManager->getEntity('CCustomerSurvey', $surveyId);
+            
+            if (!$encuesta) {
+                return [
+                    'success' => false,
+                    'error' => 'Encuesta no encontrada'
+                ];
+            }
+            
+            // Actualizar teléfono
+            $encuesta->set('phoneNumber', $phoneNumber);
+            $entityManager->saveEntity($encuesta);
+            
+            return [
+                'success' => true,
+                'message' => 'Teléfono actualizado correctamente'
+            ];
+            
+        } catch (\Exception $e) {
+            $GLOBALS['log']->error('Error en actualizarTelefono: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
         }
     }
 
@@ -251,6 +301,7 @@ class CCustomerSurvey extends \Espo\Core\Controllers\Base
                     'estatus' => $encuesta->get('estatus'),
                     'reenvios' => $encuesta->get('reenvios') ?? 0,
                     'ultimoReenvio' => $encuesta->get('ultimoReenvio'),
+                    'phoneNumber' => $encuesta->get('phoneNumber'),
                     'createdAt' => $encuesta->get('createdAt')
                 ];
             }
@@ -270,7 +321,6 @@ class CCustomerSurvey extends \Espo\Core\Controllers\Base
             ];
         }
     }
-
 
     public function getActionGetDetalleEncuesta($params, $data, $request)
     {
@@ -361,7 +411,9 @@ class CCustomerSurvey extends \Espo\Core\Controllers\Base
                 'additionalFeedback' => $encuesta->get('additionalFeedback'),
                 'estatus' => $encuesta->get('estatus'),
                 'reenvios' => $encuesta->get('reenvios') ?? 0,
-                'ultimoReenvio' => $encuesta->get('ultimoReenvio')
+                'ultimoReenvio' => $encuesta->get('ultimoReenvio'),
+                'phoneNumber' => $encuesta->get('phoneNumber'),
+                'url' => $encuesta->get('url')
             ];
             
             return [
@@ -1173,12 +1225,14 @@ class CCustomerSurvey extends \Espo\Core\Controllers\Base
                     AND deleted = 0";
             
             $sth = $pdo->prepare($sql);
-            $sth->execute([$claId]); // ← CORREGIDO: Usar array
+            $sth->execute([$claId]);
             
             $userIds = [];
             while ($row = $sth->fetch(\PDO::FETCH_ASSOC)) {
                 $userIds[] = $row['user_id'];
             }
+            
+            $GLOBALS['log']->debug("getUserIdsByCLA - Usuarios directos del CLA $claId: " . count($userIds));
             
             // Obtener las oficinas de estos usuarios (teams que NO son CLAs y NO es venezuela)
             $sql2 = "SELECT DISTINCT tu.team_id, t.name
@@ -1195,7 +1249,7 @@ class CCustomerSurvey extends \Espo\Core\Controllers\Base
                     AND t.deleted = 0";
             
             $sth2 = $pdo->prepare($sql2);
-            $sth2->execute([$claId, $claId]); // ← CORREGIDO: Usar array
+            $sth2->execute([$claId, $claId]);
             
             $oficinasIds = [];
             while ($row = $sth2->fetch(\PDO::FETCH_ASSOC)) {
@@ -1205,18 +1259,24 @@ class CCustomerSurvey extends \Espo\Core\Controllers\Base
                 }
             }
             
+            $GLOBALS['log']->debug("getUserIdsByCLA - Oficinas encontradas: " . count($oficinasIds));
+            
             // Obtener usuarios de todas las oficinas encontradas
             foreach ($oficinasIds as $oficinaId) {
                 $oficinaUsers = $this->getUserIdsByTeam($entityManager, $oficinaId);
                 $userIds = array_merge($userIds, $oficinaUsers);
             }
             
-            // Eliminar duplicados
-            $userIds = array_unique($userIds);
+            // ✅ CORRECCIÓN: Eliminar duplicados y reindexar
+            $userIds = array_values(array_unique($userIds));
+            
+            $GLOBALS['log']->debug("getUserIdsByCLA - Total usuarios únicos: " . count($userIds));
+            $GLOBALS['log']->debug("getUserIdsByCLA - Ejemplo de índices: " . print_r(array_slice(array_keys($userIds), 0, 20), true));
             
             return $userIds;
             
         } catch (\Exception $e) {
+            $GLOBALS['log']->error("❌ Error en getUserIdsByCLA: " . $e->getMessage());
             return [];
         }
     }
@@ -1329,8 +1389,15 @@ class CCustomerSurvey extends \Espo\Core\Controllers\Base
             $userIds = $this->getUserIdsByCLA($entityManager, $claId);
             
             if (empty($userIds)) {
+                $GLOBALS['log']->warning("obtenerEstadisticasPorOficina: No se encontraron usuarios para CLA: " . $claId);
                 return [];
             }
+            
+            // ✅ CORRECCIÓN CRÍTICA: Reindexar el array para índices consecutivos
+            $userIds = array_values($userIds);
+            
+            // ✅ CORRECCIÓN: Verificar que hay userIds antes de crear placeholders
+            $placeholders = implode(',', array_fill(0, count($userIds), '?'));
             
             // Obtener oficinas con sus usuarios
             $pdo = $entityManager->getPDO();
@@ -1338,11 +1405,15 @@ class CCustomerSurvey extends \Espo\Core\Controllers\Base
             $sql = "SELECT DISTINCT t.id, t.name 
                     FROM team t
                     INNER JOIN team_user tu ON t.id = tu.team_id
-                    WHERE tu.user_id IN (" . implode(',', array_fill(0, count($userIds), '?')) . ")
+                    WHERE tu.user_id IN ($placeholders)
                     AND t.id NOT LIKE 'CLA%'
                     AND t.id != 'venezuela'
                     AND tu.deleted = 0
                     AND t.deleted = 0";
+            
+            $GLOBALS['log']->debug("obtenerEstadisticasPorOficina - SQL: " . $sql);
+            $GLOBALS['log']->debug("obtenerEstadisticasPorOficina - Parámetros count: " . count($userIds));
+            $GLOBALS['log']->debug("obtenerEstadisticasPorOficina - Primeros 10 parámetros: " . implode(', ', array_slice($userIds, 0, 10)));
             
             $sth = $pdo->prepare($sql);
             $sth->execute($userIds);
@@ -1355,13 +1426,18 @@ class CCustomerSurvey extends \Espo\Core\Controllers\Base
                 ];
             }
             
-            // Obtener estadísticas por oficina
+            $GLOBALS['log']->info("obtenerEstadisticasPorOficina - Oficinas encontradas: " . count($oficinas));
+            
+            // ✅ FALTA: Obtener estadísticas por oficina
             $estadisticasOficinas = [];
             
             foreach ($oficinas as $oficina) {
+                $GLOBALS['log']->debug("Procesando oficina: " . $oficina['name'] . " (ID: " . $oficina['id'] . ")");
+                
                 $oficinaUserIds = $this->getUserIdsByTeam($entityManager, $oficina['id']);
                 
                 if (empty($oficinaUserIds)) {
+                    $GLOBALS['log']->debug("Oficina sin usuarios: " . $oficina['name']);
                     continue;
                 }
                 
@@ -1376,6 +1452,8 @@ class CCustomerSurvey extends \Espo\Core\Controllers\Base
                     ->where($whereClause)
                     ->count();
                 
+                $GLOBALS['log']->debug("Oficina " . $oficina['name'] . " - Total encuestas: " . $totalEncuestas);
+                
                 if ($totalEncuestas > 0) {
                     // Satisfacción promedio
                     $encuestasConRating = $entityManager->getRepository('CCustomerSurvey')
@@ -1385,11 +1463,13 @@ class CCustomerSurvey extends \Espo\Core\Controllers\Base
                     $sumaRatings = 0;
                     $contadorRatings = 0;
                     
-                    foreach ($encuestasConRating as $encuesta) {
-                        $rating = $encuesta->get('generalAdvisorRating');
-                        if ($rating !== null) {
-                            $sumaRatings += (float)$rating;
-                            $contadorRatings++;
+                    if ($encuestasConRating) {
+                        foreach ($encuestasConRating as $encuesta) {
+                            $rating = $encuesta->get('generalAdvisorRating');
+                            if ($rating !== null) {
+                                $sumaRatings += (float)$rating;
+                                $contadorRatings++;
+                            }
                         }
                     }
                     
@@ -1410,6 +1490,13 @@ class CCustomerSurvey extends \Espo\Core\Controllers\Base
                         'satisfaccionPromedio' => $satisfaccionPromedio,
                         'porcentajeRecomendacion' => $porcentajeRecomendacion
                     ];
+                    
+                    $GLOBALS['log']->debug("Oficina " . $oficina['name'] . " - Stats: " . 
+                        "Encuestas: $totalEncuestas, " .
+                        "Satisfacción: $satisfaccionPromedio, " .
+                        "Recomendación: $porcentajeRecomendacion%");
+                } else {
+                    $GLOBALS['log']->debug("Oficina " . $oficina['name'] . " - Sin encuestas completadas");
                 }
             }
             
@@ -1418,10 +1505,13 @@ class CCustomerSurvey extends \Espo\Core\Controllers\Base
                 return $b['satisfaccionPromedio'] <=> $a['satisfaccionPromedio'];
             });
             
+            $GLOBALS['log']->info("obtenerEstadisticasPorOficina - Estadísticas generadas: " . count($estadisticasOficinas) . " oficinas con datos");
+            
             return $estadisticasOficinas;
             
         } catch (\Exception $e) {
             $GLOBALS['log']->error("❌ Error en obtenerEstadisticasPorOficina: " . $e->getMessage());
+            $GLOBALS['log']->error("Stack trace: " . $e->getTraceAsString());
             return [];
         }
     }
@@ -2346,13 +2436,18 @@ class CCustomerSurvey extends \Espo\Core\Controllers\Base
             $userIds = $this->getUserIdsByCLA($entityManager, $claId);
             
             if (empty($userIds)) {
+                $GLOBALS['log']->warning("getOficinasByCLA: No se encontraron usuarios para CLA: " . $claId);
                 return [];
             }
             
+            // ✅ CORRECCIÓN CRÍTICA: Reindexar el array para índices consecutivos
+            $userIds = array_values($userIds);
+            
             $pdo = $entityManager->getPDO();
             
-            // Obtener oficinas de esos usuarios (excluir CLAs y venezuela)
+            // ✅ CORRECCIÓN: Verificar que hay userIds antes de crear placeholders
             $placeholders = implode(',', array_fill(0, count($userIds), '?'));
+            
             $sql = "SELECT DISTINCT t.id, t.name 
                     FROM team t
                     INNER JOIN team_user tu ON t.id = tu.team_id
@@ -2363,6 +2458,9 @@ class CCustomerSurvey extends \Espo\Core\Controllers\Base
                     AND tu.deleted = 0
                     AND t.deleted = 0
                     ORDER BY t.name";
+            
+            $GLOBALS['log']->debug("getOficinasByCLA - SQL: " . $sql);
+            $GLOBALS['log']->debug("getOficinasByCLA - Parámetros count: " . count($userIds));
             
             $sth = $pdo->prepare($sql);
             $sth->execute($userIds);
@@ -2375,10 +2473,13 @@ class CCustomerSurvey extends \Espo\Core\Controllers\Base
                 ];
             }
             
+            $GLOBALS['log']->info("getOficinasByCLA - Oficinas encontradas: " . count($oficinas) . " para CLA: " . $claId);
+            
             return $oficinas;
             
         } catch (\Exception $e) {
             $GLOBALS['log']->error('Error getOficinasByCLA: ' . $e->getMessage());
+            $GLOBALS['log']->error('Stack trace: ' . $e->getTraceAsString());
             return [];
         }
     }

@@ -23,9 +23,11 @@ define("reportes-calidad-servicio:views/lista", [
 
         cargarPermisos: function () {
             this.permisosManager.cargarPermisosUsuario()
-                .then(function () {
+                .then(function (permisos) {
+                    this.permisos = permisos;
                     this.cargarFiltros();
-                    this.cargarEncuestas();
+                    // ✅ CORRECCIÓN: Cargar con filtros aplicados según rol
+                    this.cargarEncuestasIniciales();
                 }.bind(this))
                 .catch(function (error) {
                     console.error("Error cargando permisos:", error);
@@ -59,13 +61,82 @@ define("reportes-calidad-servicio:views/lista", [
         },
 
         cargarFiltros: function () {
-            // Cargar CLAs
+            var permisos = this.permisosManager.getPermisos();
+            
+            // ✅ NUEVO: Cargar filtros según rol
+            if (permisos.esCasaNacional || permisos.esAdministrativo) {
+                // Casa Nacional y Admin: pueden ver todo
+                this.cargarTodosCLAs();
+            } else if (permisos.esGerente || permisos.esDirector || permisos.esCoordinador) {
+                // Gerente/Director/Coordinador: solo su CLA y oficina
+                this.cargarFiltrosRestringidos(permisos);
+            } else if (permisos.esAsesorRegular) {
+                // Asesor: solo sus registros
+                this.cargarFiltrosAsesor(permisos);
+            } else {
+                // Por defecto: cargar CLAs disponibles
+                this.cargarTodosCLAs();
+            }
+        },
+
+        cargarTodosCLAs: function () {
+            // Cargar CLAs normalmente
             Espo.Ajax.getRequest("CCustomerSurvey/action/getCLAs")
                 .then(function (response) {
                     if (response.success) {
                         this.poblarSelectCLAs(response.data);
                     }
                 }.bind(this));
+        },
+
+        cargarFiltrosRestringidos: function (permisos) {
+            var selectCLA = this.$el.find('#filtro-cla');
+            var selectOficina = this.$el.find('#filtro-oficina');
+            var selectAsesor = this.$el.find('#filtro-asesor');
+            
+            // Deshabilitar CLA y establecer el del usuario
+            if (permisos.claUsuario) {
+                selectCLA.html('<option value="' + permisos.claUsuario + '" selected>' + permisos.claUsuario + '</option>');
+                selectCLA.prop('disabled', true);
+                
+                // Establecer filtro automáticamente
+                this.filtros.cla = permisos.claUsuario;
+            }
+            
+            // Deshabilitar oficina y establecer la del usuario
+            if (permisos.oficinaUsuario) {
+                selectOficina.html('<option value="' + permisos.oficinaUsuario + '" selected>Cargando...</option>');
+                selectOficina.prop('disabled', true);
+                
+                // Obtener nombre de oficina
+                Espo.Ajax.getRequest("CCustomerSurvey/action/getInfoOficina", { 
+                    oficinaId: permisos.oficinaUsuario 
+                })
+                    .then(function (response) {
+                        if (response.success) {
+                            selectOficina.html('<option value="' + permisos.oficinaUsuario + '" selected>' + response.data.nombreOficina + '</option>');
+                        }
+                    }.bind(this));
+                
+                this.filtros.oficina = permisos.oficinaUsuario;
+                
+                // Cargar asesores de la oficina
+                this.onOficinaChange(permisos.oficinaUsuario);
+            }
+        },
+
+        cargarFiltrosAsesor: function (permisos) {
+            var selectCLA = this.$el.find('#filtro-cla');
+            var selectOficina = this.$el.find('#filtro-oficina');
+            var selectAsesor = this.$el.find('#filtro-asesor');
+            
+            // Deshabilitar todos los filtros
+            selectCLA.html('<option value="">Todos mis registros</option>').prop('disabled', true);
+            selectOficina.html('<option value="">Mi oficina</option>').prop('disabled', true);
+            selectAsesor.html('<option value="' + permisos.usuarioId + '" selected>Mis encuestas</option>').prop('disabled', true);
+            
+            // Establecer filtro automáticamente
+            this.filtros.asesor = permisos.usuarioId;
         },
 
         poblarSelectCLAs: function (clas) {
@@ -156,6 +227,41 @@ define("reportes-calidad-servicio:views/lista", [
                 });
         },
 
+        cargarEncuestasIniciales: function () {
+            // ✅ CORRECCIÓN: Cargar con filtros aplicados automáticamente
+            if (!this.permisos) {
+                this.cargarEncuestas();
+                return;
+            }
+            
+            var params = {};
+            
+            if (this.permisos.esAsesorRegular) {
+                // Asesor: solo sus registros
+                params.asesorId = this.permisos.usuarioId;
+            } else if (this.permisos.esGerente || this.permisos.esDirector || this.permisos.esCoordinador) {
+                // Gerente/Director/Coordinador: solo su oficina
+                if (this.permisos.oficinaUsuario) {
+                    params.oficinaId = this.permisos.oficinaUsuario;
+                }
+            }
+            // Casa Nacional/Admin: sin filtros (cargar todo)
+            
+            var container = this.$el.find('#lista-container');
+            
+            Espo.Ajax.getRequest("CCustomerSurvey/action/getEncuestas", params)
+                .then(function (response) {
+                    if (response.success) {
+                        this.encuestas = response.data;
+                        this.encuestasFiltradas = this.encuestas;
+                        this.renderizarTabla();
+                    }
+                }.bind(this))
+                .catch(function (error) {
+                    container.html('<div class="alert alert-danger">Error al cargar encuestas</div>');
+                });
+        },
+
         cargarEncuestasFiltradas: function () {
             var container = this.$el.find('#lista-container');
             
@@ -228,22 +334,32 @@ define("reportes-calidad-servicio:views/lista", [
             }
             
             var html = '<div class="tabla-encuestas"><table><thead><tr>';
-            html += '<th>Fecha</th>';
-            html += '<th>Cliente</th>';
-            html += '<th>Asesor</th>';
-            html += '<th>Operación</th>';
-            html += '<th>Calificación</th>';
-            html += '<th>Recomendación</th>';
-            html += '<th>Estatus</th>';
-            html += '<th>Reenvíos</th>';
-            html += '<th>Acciones</th>';
+            html += '<th style="width: 90px;">Fecha</th>';
+            html += '<th style="width: 150px;">Cliente</th>';
+            html += '<th style="width: 120px;">Teléfono</th>';
+            html += '<th style="width: 180px;">Asesor</th>';
+            html += '<th style="width: 100px;">Operación</th>';
+            html += '<th style="width: 120px;">Estado</th>';
+            html += '<th style="width: 100px;">Reenvíos Realizados</th>';
+            html += '<th style="width: 100px;">Acciones</th>';
             html += '</tr></thead><tbody>';
             
             this.encuestasFiltradas.forEach(function (encuesta) {
-                var fecha = encuesta.createdAt ? new Date(encuesta.createdAt).toLocaleDateString('es-ES') : '-';
-                var calificacion = encuesta.generalAdvisorRating || '-';
-                var recomendacion = encuesta.recommendation === '1' ? '✓ Sí' : '✗ No';
+                var fecha = encuesta.createdAt ? new Date(encuesta.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '-';
                 var reenvios = encuesta.reenvios || 0;
+                var telefono = encuesta.phoneNumber || '-';
+                
+                // Cliente con nombre truncado
+                var clienteName = encuesta.clientName || '-';
+                if (clienteName.length > 20) {
+                    clienteName = clienteName.substring(0, 17) + '...';
+                }
+                
+                // Asesor con nombre truncado
+                var asesorName = encuesta.asesorNombre || '-';
+                if (asesorName.length > 25) {
+                    asesorName = asesorName.substring(0, 22) + '...';
+                }
                 
                 // Estatus
                 var estatusMap = {
@@ -255,15 +371,14 @@ define("reportes-calidad-servicio:views/lista", [
                 var estatusInfo = estatusMap[encuesta.estatus] || { texto: 'Desconocido', color: '#95a5a6' };
                 
                 html += '<tr data-id="' + encuesta.id + '" style="cursor: pointer;">';
-                html += '<td>' + fecha + '</td>';
-                html += '<td>' + (encuesta.clientName || '-') + '</td>';
-                html += '<td>' + (encuesta.asesorNombre || '-') + '</td>';
-                html += '<td>' + (encuesta.operationType || '-') + '</td>';
-                html += '<td><span class="badge" style="background: #B8A279; color: white;">' + calificacion + '/5</span></td>';
-                html += '<td>' + recomendacion + '</td>';
-                html += '<td><span class="badge" style="background: ' + estatusInfo.color + '; color: white;">' + estatusInfo.texto + '</span></td>';
-                html += '<td><span style="font-weight: 600; color: #666;">' + reenvios + '</span></td>';
-                html += '<td><button class="btn btn-sm btn-view" data-id="' + encuesta.id + '" style="background: #B8A279; color: white; border: none; padding: 5px 12px; border-radius: 4px; cursor: pointer;"><i class="fas fa-eye"></i> Ver</button></td>';
+                html += '<td style="font-size: 13px;">' + fecha + '</td>';
+                html += '<td title="' + (encuesta.clientName || '-') + '" style="font-size: 13px;">' + clienteName + '</td>';
+                html += '<td style="font-size: 13px;">' + telefono + '</td>';
+                html += '<td title="' + (encuesta.asesorNombre || '-') + '" style="font-size: 13px;">' + asesorName + '</td>';
+                html += '<td style="font-size: 13px;">' + (encuesta.operationType || '-') + '</td>';
+                html += '<td><span class="badge" style="background: ' + estatusInfo.color + '; color: white; font-size: 11px; padding: 4px 8px;">' + estatusInfo.texto + '</span></td>';
+                html += '<td style="text-align: center;"><span style="font-weight: 600; color: #666; font-size: 13px;">' + reenvios + '</span></td>';
+                html += '<td><button class="btn btn-sm btn-view" data-id="' + encuesta.id + '" style="background: #B8A279; color: white; border: none; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;"><i class="fas fa-eye"></i> Ver</button></td>';
                 html += '</tr>';
             }.bind(this));
             

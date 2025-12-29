@@ -82,6 +82,36 @@
         </div>
     </div>
     
+    <!-- Resumen de resultados -->
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <div class="resumen-resultados">
+                <span class="resumen-text">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Mostrando <strong id="total-mostrados">0</strong> de <strong id="total-encuestas">0</strong> encuestas
+                </span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Leyenda de estados -->
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <div class="leyenda-estados">
+                <span class="leyenda-titulo">
+                    <i class="fas fa-question-circle me-2"></i>
+                    <strong>Leyenda de Estados:</strong>
+                </span>
+                <div class="leyenda-items">
+                    <span class="leyenda-badge" style="background: #3498db;">Pendiente</span>
+                    <span class="leyenda-badge" style="background: #f39c12;">En Proceso</span>
+                    <span class="leyenda-badge" style="background: #27ae60;">Completada</span>
+                    <span class="leyenda-badge" style="background: #e74c3c;">Cancelada</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <!-- Contenido dinámico - Lista de encuestas -->
     <div id="lista-container">
         <div class="text-center" style="padding: 80px 20px;">
@@ -145,6 +175,18 @@
     color: #666666;
     font-size: 16px;
     margin: 0;
+}
+
+.btn-volver {
+    background: #FFFFFF;
+    color: #666666;
+    border: 2px solid #E6E6E6;
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    cursor: pointer;
 }
 
 .btn-volver {
@@ -239,6 +281,9 @@
     border: none;
     cursor: pointer;
     transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .btn-aplicar {
@@ -281,16 +326,48 @@
     font-weight: 700;
 }
 
+/* Leyenda de estados */
+.leyenda-estados {
+    background: white;
+    padding: 15px 20px;
+    border-radius: 8px;
+    border: 1px solid #E6E6E6;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.leyenda-titulo {
+    color: #363438;
+    font-size: 14px;
+}
+
+.leyenda-items {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.leyenda-badge {
+    color: white;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
 /* Tabla de encuestas */
 .tabla-encuestas {
     background: white;
     border-radius: 12px;
-    overflow: hidden;
+    overflow-x: auto;
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
 .tabla-encuestas table {
     width: 100%;
+    min-width: 1000px;
     border-collapse: collapse;
 }
 

@@ -1,16 +1,42 @@
 define("reportes-calidad-servicio:views/detalle", [
     "view",
-], function (Dep) {
+    "reportes-calidad-servicio:views/modules/permisos",
+], function (Dep, PermisosManager) {
     return Dep.extend({
         template: "reportes-calidad-servicio:detalle",
 
         setup: function () {
             this.surveyId = this.options.surveyId;
             this.encuesta = null;
+            this.permisosManager = new PermisosManager(this);
+            this.editandoTelefono = false;
         },
 
         afterRender: function () {
-            this.cargarDetalle();
+            this.setupEventListeners();
+            this.cargarPermisos();
+        },
+
+        cargarPermisos: function () {
+            this.permisosManager.cargarPermisosUsuario()
+                .then(function (permisos) {
+                    this.permisos = permisos;
+                    this.cargarDetalle();
+                }.bind(this))
+                .catch(function (error) {
+                    console.error("Error cargando permisos:", error);
+                    this.cargarDetalle();
+                }.bind(this));
+        },
+
+        setupEventListeners: function () {
+            this.$el.find('[data-action="volver"]').on('click', function () {
+                this.getRouter().navigate("#Lista", { trigger: true });
+            }.bind(this));
+
+            this.$el.find('[data-action="ejecutar-workflow"]').on('click', function () {
+                this.ejecutarWorkflow();
+            }.bind(this));
         },
 
         cargarDetalle: function () {
@@ -48,12 +74,20 @@ define("reportes-calidad-servicio:views/detalle", [
             html += '<div class="info-grid">';
             html += '<div class="info-item"><span class="info-label">Cliente</span><span class="info-value">' + (encuesta.clientName || '-') + '</span></div>';
             html += '<div class="info-item"><span class="info-label">Email</span><span class="info-value">' + (encuesta.emailAddress || '-') + '</span></div>';
+            
+            // ✅ NUEVO: Teléfono editable
+            html += '<div class="info-item"><span class="info-label">Teléfono</span>';
+            html += '<div class="campo-editable">';
+            html += '<input type="tel" id="input-telefono" value="' + (encuesta.phoneNumber || '') + '" disabled>';
+            html += '<button class="btn-editar" id="btn-editar-telefono" title="Editar teléfono"><i class="fas fa-pencil-alt"></i></button>';
+            html += '</div></div>';
+            
             html += '<div class="info-item"><span class="info-label">Asesor</span><span class="info-value">' + (encuesta.asesorNombre || '-') + '</span></div>';
             html += '<div class="info-item"><span class="info-label">Oficina</span><span class="info-value">' + (encuesta.oficinaNombre || '-') + '</span></div>';
             html += '<div class="info-item"><span class="info-label">Tipo de Operación</span><span class="info-value">' + (encuesta.operationType || '-') + '</span></div>';
             html += '<div class="info-item"><span class="info-label">Fecha</span><span class="info-value">' + (encuesta.createdAt ? new Date(encuesta.createdAt).toLocaleDateString('es-ES') : '-') + '</span></div>';
             
-            // ✅ AGREGAR: Estatus
+            // Estatus
             var estatusMap = {
                 '0': { texto: 'Pendiente', color: '#3498db' },
                 '1': { texto: 'En Proceso', color: '#f39c12' },
@@ -63,14 +97,32 @@ define("reportes-calidad-servicio:views/detalle", [
             var estatusInfo = estatusMap[encuesta.estatus] || { texto: 'Desconocido', color: '#95a5a6' };
             html += '<div class="info-item"><span class="info-label">Estatus</span><span class="info-value"><span style="background: ' + estatusInfo.color + '; color: white; padding: 4px 12px; border-radius: 4px; font-size: 14px;">' + estatusInfo.texto + '</span></span></div>';
             
-            // ✅ AGREGAR: Reenvíos
+            // Reenvíos
             html += '<div class="info-item"><span class="info-label">Reenvíos</span><span class="info-value" style="color: #B8A279; font-weight: 700;">' + (encuesta.reenvios || 0) + '</span></div>';
             
-            // ✅ AGREGAR: Último reenvío
+            // Último reenvío
             var ultimoReenvio = encuesta.ultimoReenvio ? new Date(encuesta.ultimoReenvio).toLocaleDateString('es-ES') + ' ' + new Date(encuesta.ultimoReenvio).toLocaleTimeString('es-ES') : 'N/A';
             html += '<div class="info-item"><span class="info-label">Último Reenvío</span><span class="info-value">' + ultimoReenvio + '</span></div>';
             
             html += '</div>';
+            html += '</div>';
+            html += '</div></div>';
+            
+            // ✅ NUEVO: Card de URL de encuesta
+            if (encuesta.url) {
+                html += '<div class="row"><div class="col-md-12">';
+                html += '<div class="info-card">';
+                html += '<div class="info-card-header">';
+                html += '<i class="fas fa-link info-card-icon"></i>';
+                html += '<h3 class="info-card-title">URL de la Encuesta</h3>';
+                html += '</div>';
+                html += '<div class="url-field">';
+                html += '<span class="url-text" id="url-text">' + encuesta.url + '</span>';
+                html += '<button class="btn-copiar" onclick="copiarURL()"><i class="fas fa-copy"></i> Copiar</button>';
+                html += '</div>';
+                html += '</div>';
+                html += '</div></div>';
+            }
             html += '</div>';
             html += '</div></div>';
             
@@ -207,6 +259,118 @@ define("reportes-calidad-servicio:views/detalle", [
             }
             
             container.html(html);
+            
+            // ✅ NUEVO: Mostrar botón workflow si es gerente/director/coordinador
+            if (this.permisos && (this.permisos.esGerente || this.permisos.esDirector || this.permisos.esCoordinador)) {
+                this.$el.find('.btn-workflow').show();
+            }
+            
+            // ✅ NUEVO: Event listeners para edición de teléfono
+            this.setupTelefonoEditable();
+        },
+
+        setupTelefonoEditable: function () {
+            var self = this;
+            var btnEditar = this.$el.find('#btn-editar-telefono');
+            var inputTelefono = this.$el.find('#input-telefono');
+            
+            btnEditar.off('click').on('click', function () {
+                if (!self.editandoTelefono) {
+                    // Activar modo edición
+                    self.editandoTelefono = true;
+                    inputTelefono.prop('disabled', false).focus();
+                    btnEditar.html('<i class="fas fa-save"></i>');
+                    btnEditar.attr('title', 'Guardar teléfono');
+                    btnEditar.addClass('btn-guardar').removeClass('btn-editar');
+                } else {
+                    // Guardar cambios
+                    var nuevoTelefono = inputTelefono.val();
+                    self.guardarTelefono(nuevoTelefono);
+                }
+            });
+        },
+
+        guardarTelefono: function (nuevoTelefono) {
+            var self = this;
+            
+            Espo.Ajax.postRequest('CCustomerSurvey/action/actualizarTelefono', {
+                surveyId: this.surveyId,
+                phoneNumber: nuevoTelefono
+            })
+                .then(function (response) {
+                    if (response.success) {
+                        Espo.Ui.success('Teléfono actualizado correctamente');
+                        
+                        // Desactivar modo edición
+                        self.editandoTelefono = false;
+                        var inputTelefono = self.$el.find('#input-telefono');
+                        var btnEditar = self.$el.find('#btn-editar-telefono');
+                        
+                        inputTelefono.prop('disabled', true);
+                        btnEditar.html('<i class="fas fa-pencil-alt"></i>');
+                        btnEditar.attr('title', 'Editar teléfono');
+                        btnEditar.removeClass('btn-guardar').addClass('btn-editar');
+                    } else {
+                        Espo.Ui.error('Error al actualizar teléfono');
+                    }
+                })
+                .catch(function (error) {
+                    Espo.Ui.error('Error al actualizar teléfono: ' + error.message);
+                });
+        },
+
+        ejecutarWorkflow: function () {
+            var self = this;
+            
+            Espo.Ui.confirm('¿Desea ejecutar el workflow para esta encuesta?', function () {
+                Espo.Ajax.postRequest('Workflow/action/runManualWorkflow', {
+                    targetId: self.surveyId,
+                    workflowId: '689642aa335734383',
+                    entityType: 'CCustomerSurvey'
+                })
+                    .then(function (response) {
+                        Espo.Ui.success('Workflow ejecutado correctamente');
+                    })
+                    .catch(function (error) {
+                        Espo.Ui.error('Error al ejecutar workflow: ' + error.message);
+                    });
+            });
         }
     });
 });
+
+// ✅ Función global para copiar URL
+function copiarURL() {
+    var urlText = document.getElementById('url-text').textContent;
+    
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(urlText)
+            .then(function () {
+                Espo.Ui.success('URL copiada al portapapeles');
+            })
+            .catch(function (error) {
+                copiarURLFallback(urlText);
+            });
+    } else {
+        copiarURLFallback(urlText);
+    }
+}
+
+function copiarURLFallback(text) {
+    var textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    try {
+        document.execCommand('copy');
+        Espo.Ui.success('URL copiada al portapapeles');
+    } catch (error) {
+        Espo.Ui.error('No se pudo copiar la URL');
+    }
+    
+    document.body.removeChild(textArea);
+}
