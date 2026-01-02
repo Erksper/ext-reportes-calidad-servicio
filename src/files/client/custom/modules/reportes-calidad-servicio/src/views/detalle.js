@@ -75,30 +75,41 @@ define("reportes-calidad-servicio:views/detalle", [
             html += '<div class="info-item"><span class="info-label">Cliente</span><span class="info-value">' + (encuesta.clientName || '-') + '</span></div>';
             html += '<div class="info-item"><span class="info-label">Email</span><span class="info-value">' + (encuesta.emailAddress || '-') + '</span></div>';
             
-            // ✅ NUEVO: Teléfono editable
+            // Teléfono editable (solo para gerentes, directores, coordinadores y casa nacional)
+            var puedeEditarTelefono = this.permisos && (
+                this.permisos.esGerente || 
+                this.permisos.esDirector || 
+                this.permisos.esCoordinador || 
+                this.permisos.esCasaNacional
+            );
+            
             html += '<div class="info-item"><span class="info-label">Teléfono</span>';
-            html += '<div class="campo-editable">';
-            html += '<input type="tel" id="input-telefono" value="' + (encuesta.phoneNumber || '') + '" disabled>';
-            html += '<button class="btn-editar" id="btn-editar-telefono" title="Editar teléfono"><i class="fas fa-pencil-alt"></i></button>';
-            html += '</div></div>';
+            if (puedeEditarTelefono) {
+                html += '<div class="campo-editable">';
+                html += '<input type="tel" id="input-telefono" value="' + (encuesta.phoneNumber || '') + '" disabled>';
+                html += '<button class="btn-editar" id="btn-editar-telefono" title="Editar teléfono"><i class="fas fa-pencil-alt"></i></button>';
+                html += '</div>';
+            } else {
+                html += '<span class="info-value">' + (encuesta.phoneNumber || '-') + '</span>';
+            }
+            html += '</div>';
             
             html += '<div class="info-item"><span class="info-label">Asesor</span><span class="info-value">' + (encuesta.asesorNombre || '-') + '</span></div>';
             html += '<div class="info-item"><span class="info-label">Oficina</span><span class="info-value">' + (encuesta.oficinaNombre || '-') + '</span></div>';
             html += '<div class="info-item"><span class="info-label">Tipo de Operación</span><span class="info-value">' + (encuesta.operationType || '-') + '</span></div>';
             html += '<div class="info-item"><span class="info-label">Fecha</span><span class="info-value">' + (encuesta.createdAt ? new Date(encuesta.createdAt).toLocaleDateString('es-ES') : '-') + '</span></div>';
             
-            // Estatus
+            // Estado (actualizado - sin cancelado)
             var estatusMap = {
-                '0': { texto: 'Pendiente', color: '#3498db' },
-                '1': { texto: 'En Proceso', color: '#f39c12' },
-                '2': { texto: 'Completada', color: '#27ae60' },
-                '3': { texto: 'Cancelada', color: '#e74c3c' }
+                '0': { texto: 'No enviado', color: '#3498db' },
+                '1': { texto: 'Enviado', color: '#f39c12' },
+                '2': { texto: 'Completado', color: '#27ae60' }
             };
             var estatusInfo = estatusMap[encuesta.estatus] || { texto: 'Desconocido', color: '#95a5a6' };
-            html += '<div class="info-item"><span class="info-label">Estatus</span><span class="info-value"><span style="background: ' + estatusInfo.color + '; color: white; padding: 4px 12px; border-radius: 4px; font-size: 14px;">' + estatusInfo.texto + '</span></span></div>';
+            html += '<div class="info-item"><span class="info-label">Estado</span><span class="info-value"><span style="background: ' + estatusInfo.color + '; color: white; padding: 4px 12px; border-radius: 4px; font-size: 14px;">' + estatusInfo.texto + '</span></span></div>';
             
-            // Reenvíos
-            html += '<div class="info-item"><span class="info-label">Reenvíos</span><span class="info-value" style="color: #B8A279; font-weight: 700;">' + (encuesta.reenvios || 0) + '</span></div>';
+            // Reenvíos Realizados
+            html += '<div class="info-item"><span class="info-label">Reenvíos Realizados</span><span class="info-value" style="color: #B8A279; font-weight: 700;">' + (encuesta.reenvios || 0) + '</span></div>';
             
             // Último reenvío
             var ultimoReenvio = encuesta.ultimoReenvio ? new Date(encuesta.ultimoReenvio).toLocaleDateString('es-ES') + ' ' + new Date(encuesta.ultimoReenvio).toLocaleTimeString('es-ES') : 'N/A';
@@ -108,7 +119,7 @@ define("reportes-calidad-servicio:views/detalle", [
             html += '</div>';
             html += '</div></div>';
             
-            // ✅ NUEVO: Card de URL de encuesta
+            // Card de URL - SIEMPRE VISIBLE para todos los usuarios
             if (encuesta.url) {
                 html += '<div class="row"><div class="col-md-12">';
                 html += '<div class="info-card">';
@@ -123,8 +134,6 @@ define("reportes-calidad-servicio:views/detalle", [
                 html += '</div>';
                 html += '</div></div>';
             }
-            html += '</div>';
-            html += '</div></div>';
             
             // Card de calificaciones
             html += '<div class="row"><div class="col-md-12">';
@@ -260,13 +269,22 @@ define("reportes-calidad-servicio:views/detalle", [
             
             container.html(html);
             
-            // ✅ NUEVO: Mostrar botón workflow si es gerente/director/coordinador
-            if (this.permisos && (this.permisos.esGerente || this.permisos.esDirector || this.permisos.esCoordinador)) {
-                this.$el.find('.btn-workflow').show();
+            // Mostrar botón "Enviar Encuesta" SOLO para Casa Nacional
+            if (this.permisos && this.permisos.esCasaNacional) {
+                this.$el.find('.btn-workflow').css('display', 'flex');
             }
             
-            // ✅ NUEVO: Event listeners para edición de teléfono
-            this.setupTelefonoEditable();
+            // Event listeners para edición de teléfono (solo si puede editar)
+            var puedeEditarTelefono = this.permisos && (
+                this.permisos.esGerente || 
+                this.permisos.esDirector || 
+                this.permisos.esCoordinador || 
+                this.permisos.esCasaNacional
+            );
+            
+            if (puedeEditarTelefono) {
+                this.setupTelefonoEditable();
+            }
         },
 
         setupTelefonoEditable: function () {
@@ -322,24 +340,24 @@ define("reportes-calidad-servicio:views/detalle", [
         ejecutarWorkflow: function () {
             var self = this;
             
-            Espo.Ui.confirm('¿Desea ejecutar el workflow para esta encuesta?', function () {
+            Espo.Ui.confirm('¿Desea enviar la encuesta?', function () {
                 Espo.Ajax.postRequest('Workflow/action/runManualWorkflow', {
                     targetId: self.surveyId,
                     workflowId: '689642aa335734383',
                     entityType: 'CCustomerSurvey'
                 })
                     .then(function (response) {
-                        Espo.Ui.success('Workflow ejecutado correctamente');
+                        Espo.Ui.success('Encuesta enviada correctamente');
                     })
                     .catch(function (error) {
-                        Espo.Ui.error('Error al ejecutar workflow: ' + error.message);
+                        Espo.Ui.error('Error al enviar encuesta: ' + error.message);
                     });
             });
         }
     });
 });
 
-// ✅ Función global para copiar URL
+// Función global para copiar URL
 function copiarURL() {
     var urlText = document.getElementById('url-text').textContent;
     

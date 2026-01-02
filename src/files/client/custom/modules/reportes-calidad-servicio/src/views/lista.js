@@ -26,7 +26,6 @@ define("reportes-calidad-servicio:views/lista", [
                 .then(function (permisos) {
                     this.permisos = permisos;
                     this.cargarFiltros();
-                    // ✅ CORRECCIÓN: Cargar con filtros aplicados según rol
                     this.cargarEncuestasIniciales();
                 }.bind(this))
                 .catch(function (error) {
@@ -63,24 +62,18 @@ define("reportes-calidad-servicio:views/lista", [
         cargarFiltros: function () {
             var permisos = this.permisosManager.getPermisos();
             
-            // ✅ NUEVO: Cargar filtros según rol
             if (permisos.esCasaNacional || permisos.esAdministrativo) {
-                // Casa Nacional y Admin: pueden ver todo
                 this.cargarTodosCLAs();
             } else if (permisos.esGerente || permisos.esDirector || permisos.esCoordinador) {
-                // Gerente/Director/Coordinador: solo su CLA y oficina
                 this.cargarFiltrosRestringidos(permisos);
             } else if (permisos.esAsesorRegular) {
-                // Asesor: solo sus registros
                 this.cargarFiltrosAsesor(permisos);
             } else {
-                // Por defecto: cargar CLAs disponibles
                 this.cargarTodosCLAs();
             }
         },
 
         cargarTodosCLAs: function () {
-            // Cargar CLAs normalmente
             Espo.Ajax.getRequest("CCustomerSurvey/action/getCLAs")
                 .then(function (response) {
                     if (response.success) {
@@ -94,21 +87,16 @@ define("reportes-calidad-servicio:views/lista", [
             var selectOficina = this.$el.find('#filtro-oficina');
             var selectAsesor = this.$el.find('#filtro-asesor');
             
-            // Deshabilitar CLA y establecer el del usuario
             if (permisos.claUsuario) {
                 selectCLA.html('<option value="' + permisos.claUsuario + '" selected>' + permisos.claUsuario + '</option>');
                 selectCLA.prop('disabled', true);
-                
-                // Establecer filtro automáticamente
                 this.filtros.cla = permisos.claUsuario;
             }
             
-            // Deshabilitar oficina y establecer la del usuario
             if (permisos.oficinaUsuario) {
                 selectOficina.html('<option value="' + permisos.oficinaUsuario + '" selected>Cargando...</option>');
                 selectOficina.prop('disabled', true);
                 
-                // Obtener nombre de oficina
                 Espo.Ajax.getRequest("CCustomerSurvey/action/getInfoOficina", { 
                     oficinaId: permisos.oficinaUsuario 
                 })
@@ -119,8 +107,6 @@ define("reportes-calidad-servicio:views/lista", [
                     }.bind(this));
                 
                 this.filtros.oficina = permisos.oficinaUsuario;
-                
-                // Cargar asesores de la oficina
                 this.onOficinaChange(permisos.oficinaUsuario);
             }
         },
@@ -130,12 +116,10 @@ define("reportes-calidad-servicio:views/lista", [
             var selectOficina = this.$el.find('#filtro-oficina');
             var selectAsesor = this.$el.find('#filtro-asesor');
             
-            // Deshabilitar todos los filtros
             selectCLA.html('<option value="">Todos mis registros</option>').prop('disabled', true);
             selectOficina.html('<option value="">Mi oficina</option>').prop('disabled', true);
             selectAsesor.html('<option value="' + permisos.usuarioId + '" selected>Mis encuestas</option>').prop('disabled', true);
             
-            // Establecer filtro automáticamente
             this.filtros.asesor = permisos.usuarioId;
         },
 
@@ -228,7 +212,6 @@ define("reportes-calidad-servicio:views/lista", [
         },
 
         cargarEncuestasIniciales: function () {
-            // ✅ CORRECCIÓN: Cargar con filtros aplicados automáticamente
             if (!this.permisos) {
                 this.cargarEncuestas();
                 return;
@@ -237,15 +220,12 @@ define("reportes-calidad-servicio:views/lista", [
             var params = {};
             
             if (this.permisos.esAsesorRegular) {
-                // Asesor: solo sus registros
                 params.asesorId = this.permisos.usuarioId;
             } else if (this.permisos.esGerente || this.permisos.esDirector || this.permisos.esCoordinador) {
-                // Gerente/Director/Coordinador: solo su oficina
                 if (this.permisos.oficinaUsuario) {
                     params.oficinaId = this.permisos.oficinaUsuario;
                 }
             }
-            // Casa Nacional/Admin: sin filtros (cargar todo)
             
             var container = this.$el.find('#lista-container');
             
@@ -265,7 +245,6 @@ define("reportes-calidad-servicio:views/lista", [
         cargarEncuestasFiltradas: function () {
             var container = this.$el.find('#lista-container');
             
-            // Construir parámetros de filtro
             var params = {};
             if (this.filtros.cla) params.claId = this.filtros.cla;
             if (this.filtros.oficina) params.oficinaId = this.filtros.oficina;
@@ -297,7 +276,6 @@ define("reportes-calidad-servicio:views/lista", [
                 fechaHasta: this.$el.find('#filtro-fecha-hasta').val()
             };
             
-            // ✅ CORRECCIÓN: Recargar encuestas con filtros aplicados en servidor
             this.cargarEncuestasFiltradas();
         },
 
@@ -325,8 +303,8 @@ define("reportes-calidad-servicio:views/lista", [
         renderizarTabla: function () {
             var container = this.$el.find('#lista-container');
             
-            this.$el.find('#total-mostrados').text(this.encuestasFiltradas.length);
-            this.$el.find('#total-encuestas').text(this.encuestas.length);
+            // Actualizar contador de encuestas
+            this.$el.find('#total-encuestas-mostradas').text(this.encuestasFiltradas.length);
             
             if (this.encuestasFiltradas.length === 0) {
                 container.html('<div class="no-data-card"><div class="no-data-icon"><i class="fas fa-inbox"></i></div><h3 class="no-data-title">No hay encuestas</h3><p class="no-data-text">No se encontraron encuestas con los filtros aplicados</p></div>');
@@ -349,24 +327,21 @@ define("reportes-calidad-servicio:views/lista", [
                 var reenvios = encuesta.reenvios || 0;
                 var telefono = encuesta.phoneNumber || '-';
                 
-                // Cliente con nombre truncado
                 var clienteName = encuesta.clientName || '-';
                 if (clienteName.length > 20) {
                     clienteName = clienteName.substring(0, 17) + '...';
                 }
                 
-                // Asesor con nombre truncado
                 var asesorName = encuesta.asesorNombre || '-';
                 if (asesorName.length > 25) {
                     asesorName = asesorName.substring(0, 22) + '...';
                 }
                 
-                // Estatus
+                // Estados actualizados (sin cancelado)
                 var estatusMap = {
-                    '0': { texto: 'Pendiente', color: '#3498db' },
-                    '1': { texto: 'En Proceso', color: '#f39c12' },
-                    '2': { texto: 'Completada', color: '#27ae60' },
-                    '3': { texto: 'Cancelada', color: '#e74c3c' }
+                    '0': { texto: 'No enviado', color: '#3498db' },
+                    '1': { texto: 'Enviado', color: '#f39c12' },
+                    '2': { texto: 'Completado', color: '#27ae60' }
                 };
                 var estatusInfo = estatusMap[encuesta.estatus] || { texto: 'Desconocido', color: '#95a5a6' };
                 
@@ -386,7 +361,6 @@ define("reportes-calidad-servicio:views/lista", [
             
             container.html(html);
             
-            // Event listeners para filas
             container.find('tr[data-id]').on('click', function (e) {
                 if (!$(e.target).closest('button').length) {
                     var id = $(e.currentTarget).data('id');
@@ -394,7 +368,6 @@ define("reportes-calidad-servicio:views/lista", [
                 }
             }.bind(this));
             
-            // Event listeners para botones
             container.find('.btn-view').on('click', function (e) {
                 e.stopPropagation();
                 var id = $(e.currentTarget).data('id');

@@ -17,12 +17,31 @@
                     </div>
                     <div class="header-actions">
                         <button class="btn btn-volver" data-action="volver">
-                            <i class="fas fa-arrow-left me-2"></i> Volver a Lista
+                            <i class="fas fa-arrow-left"></i>
+                            <span>Volver a Lista</span>
                         </button>
-                        <button class="btn btn-workflow" data-action="ejecutar-workflow" style="display: none;">
-                            <i class="fas fa-play me-2"></i> Ejecutar Workflow
+                        <button class="btn btn-workflow" data-action="ejecutar-workflow">
+                            <i class="fas fa-paper-plane"></i>
+                            <span>Enviar Encuesta</span>
                         </button>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Leyenda de estados -->
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <div class="leyenda-estados">
+                <span class="leyenda-titulo">
+                    <i class="fas fa-question-circle me-2"></i>
+                    <strong>Leyenda de Estados:</strong>
+                </span>
+                <div class="leyenda-items">
+                    <span class="leyenda-badge" style="background: #3498db;" title="No se ha enviado el mensaje por algún problema en los datos">No enviado</span>
+                    <span class="leyenda-badge" style="background: #f39c12;" title="Mensaje enviado a la espera de que el cliente complete la encuesta">Enviado</span>
+                    <span class="leyenda-badge" style="background: #27ae60;" title="Encuesta completada por el usuario">Completado</span>
                 </div>
             </div>
         </div>
@@ -83,44 +102,91 @@
     margin: 8px 0 0 0;
 }
 
+.header-actions {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
 .btn-volver {
-    background: #FFFFFF;
-    color: #666666;
-    border: 2px solid #E6E6E6;
+    background: #B8A279;
+    color: white;
+    border: 2px solid #B8A279;
     border-radius: 8px;
     padding: 12px 24px;
     font-weight: 600;
     font-size: 14px;
     transition: all 0.3s ease;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .btn-volver:hover {
-    background: #F5F5F5;
-    border-color: #B8A279;
-    color: #B8A279;
+    background: #9D8B5F;
+    border-color: #9D8B5F;
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(184, 162, 121, 0.15);
+    box-shadow: 0 4px 12px rgba(184, 162, 121, 0.3);
 }
 
 .btn-workflow {
-    background: #f39c12;
+    background: #B8A279;
     color: white;
-    border: 2px solid #f39c12;
+    border: 2px solid #B8A279;
     border-radius: 8px;
     padding: 12px 24px;
     font-weight: 600;
     font-size: 14px;
     transition: all 0.3s ease;
     cursor: pointer;
-    margin-left: 10px;
+    display: none;
+    align-items: center;
+    gap: 10px;
 }
 
 .btn-workflow:hover {
-    background: #e67e22;
-    border-color: #e67e22;
+    background: #9D8B5F;
+    border-color: #9D8B5F;
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(243, 156, 18, 0.3);
+    box-shadow: 0 4px 12px rgba(184, 162, 121, 0.3);
+}
+
+/* Leyenda de estados */
+.leyenda-estados {
+    background: white;
+    padding: 15px 20px;
+    border-radius: 8px;
+    border: 1px solid #E6E6E6;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.leyenda-titulo {
+    color: #363438;
+    font-size: 14px;
+}
+
+.leyenda-items {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.leyenda-badge {
+    color: white;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: help;
+    transition: transform 0.2s ease;
+}
+
+.leyenda-badge:hover {
+    transform: scale(1.05);
 }
 
 /* Estilos para campo editable */
@@ -202,6 +268,9 @@
     transition: all 0.3s ease;
     white-space: nowrap;
     font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .btn-copiar:hover {
@@ -336,6 +405,16 @@
     .header-left {
         flex-direction: column;
         text-align: center;
+    }
+    
+    .header-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .header-actions button {
+        width: 100%;
+        justify-content: center;
     }
     
     .page-title {

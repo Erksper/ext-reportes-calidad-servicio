@@ -51,13 +51,12 @@
                             </select>
                         </div>
                         <div class="filter-group">
-                            <label for="filtro-estatus">Estatus</label>
+                            <label for="filtro-estatus">Estado</label>
                             <select id="filtro-estatus" class="form-control">
                                 <option value="">Todos</option>
-                                <option value="0">Pendiente</option>
-                                <option value="1">En Proceso</option>
-                                <option value="2">Completada</option>
-                                <option value="3">Cancelada</option>
+                                <option value="0">No enviado</option>
+                                <option value="1">Enviado</option>
+                                <option value="2">Completado</option>
                             </select>
                         </div>
                         <div class="filter-group">
@@ -71,10 +70,12 @@
                     </div>
                     <div class="filtro-actions">
                         <button class="btn btn-action btn-aplicar" data-action="aplicar-filtros">
-                            <i class="fas fa-search me-2"></i> Buscar
+                            <i class="fas fa-search"></i>
+                            <span>Buscar</span>
                         </button>
                         <button class="btn btn-action btn-limpiar" data-action="limpiar-filtros">
-                            <i class="fas fa-times me-2"></i> Limpiar
+                            <i class="fas fa-times"></i>
+                            <span>Limpiar</span>
                         </button>
                     </div>
                 </div>
@@ -82,14 +83,12 @@
         </div>
     </div>
     
-    <!-- Resumen de resultados -->
+    <!-- Contador de encuestas -->
     <div class="row mb-3">
         <div class="col-md-12">
-            <div class="resumen-resultados">
-                <span class="resumen-text">
-                    <i class="fas fa-info-circle me-2"></i>
-                    Mostrando <strong id="total-mostrados">0</strong> de <strong id="total-encuestas">0</strong> encuestas
-                </span>
+            <div class="contador-encuestas">
+                <i class="fas fa-list-alt me-2"></i>
+                <strong id="total-encuestas-mostradas">0</strong> encuestas encontradas
             </div>
         </div>
     </div>
@@ -103,10 +102,9 @@
                     <strong>Leyenda de Estados:</strong>
                 </span>
                 <div class="leyenda-items">
-                    <span class="leyenda-badge" style="background: #3498db;">Pendiente</span>
-                    <span class="leyenda-badge" style="background: #f39c12;">En Proceso</span>
-                    <span class="leyenda-badge" style="background: #27ae60;">Completada</span>
-                    <span class="leyenda-badge" style="background: #e74c3c;">Cancelada</span>
+                    <span class="leyenda-badge" style="background: #3498db;" title="No se ha enviado el mensaje por algún problema en los datos">No enviado</span>
+                    <span class="leyenda-badge" style="background: #f39c12;" title="Mensaje enviado a la espera de que el cliente complete la encuesta">Enviado</span>
+                    <span class="leyenda-badge" style="background: #27ae60;" title="Encuesta completada por el usuario">Completado</span>
                 </div>
             </div>
         </div>
@@ -175,38 +173,6 @@
     color: #666666;
     font-size: 16px;
     margin: 0;
-}
-
-.btn-volver {
-    background: #FFFFFF;
-    color: #666666;
-    border: 2px solid #E6E6E6;
-    border-radius: 8px;
-    padding: 12px 24px;
-    font-weight: 600;
-    font-size: 14px;
-    transition: all 0.3s ease;
-    cursor: pointer;
-}
-
-.btn-volver {
-    background: #FFFFFF;
-    color: #666666;
-    border: 2px solid #E6E6E6;
-    border-radius: 8px;
-    padding: 12px 24px;
-    font-weight: 600;
-    font-size: 14px;
-    transition: all 0.3s ease;
-    cursor: pointer;
-}
-
-.btn-volver:hover {
-    background: #F5F5F5;
-    border-color: #B8A279;
-    color: #B8A279;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(184, 162, 121, 0.15);
 }
 
 /* Filtros */
@@ -284,6 +250,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 8px;
 }
 
 .btn-aplicar {
@@ -298,32 +265,36 @@
 }
 
 .btn-limpiar {
-    background: #666666;
-    color: white;
+    background: #FFFFFF;
+    color: #666666;
+    border: 2px solid #E6E6E6;
 }
 
 .btn-limpiar:hover {
-    background: #555555;
+    background: #B8A279;
+    color: white;
+    border-color: #B8A279;
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 102, 102, 0.2);
+    box-shadow: 0 4px 12px rgba(184, 162, 121, 0.2);
 }
 
-/* Resumen resultados */
-.resumen-resultados {
+/* Contador de encuestas */
+.contador-encuestas {
     background: white;
     padding: 15px 20px;
     border-radius: 8px;
     border: 1px solid #E6E6E6;
+    border-left: 4px solid #B8A279;
+    color: #363438;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
 }
 
-.resumen-text {
-    color: #666666;
-    font-size: 14px;
-}
-
-.resumen-text strong {
+.contador-encuestas strong {
     color: #B8A279;
-    font-weight: 700;
+    font-size: 18px;
+    margin: 0 5px;
 }
 
 /* Leyenda de estados */
@@ -355,6 +326,12 @@
     border-radius: 4px;
     font-size: 12px;
     font-weight: 600;
+    cursor: help;
+    transition: transform 0.2s ease;
+}
+
+.leyenda-badge:hover {
+    transform: scale(1.05);
 }
 
 /* Tabla de encuestas */
@@ -399,6 +376,13 @@
     color: #363438;
 }
 
+.btn-view {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
 /* Spinner */
 .spinner-large {
     width: 60px;
@@ -413,6 +397,33 @@
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+/* No data card */
+.no-data-card {
+    background: white;
+    border-radius: 12px;
+    padding: 60px 40px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.no-data-icon {
+    font-size: 64px;
+    color: #B8A279;
+    margin-bottom: 20px;
+}
+
+.no-data-title {
+    color: #1A1A1A;
+    font-weight: 700;
+    font-size: 24px;
+    margin-bottom: 10px;
+}
+
+.no-data-text {
+    color: #666666;
+    font-size: 16px;
 }
 
 /* Responsive */
@@ -436,6 +447,14 @@
     
     .tabla-encuestas {
         overflow-x: auto;
+    }
+    
+    .filtro-actions {
+        flex-direction: column;
+    }
+    
+    .btn-action {
+        width: 100%;
     }
 }
 </style>

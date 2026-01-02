@@ -1,0 +1,4 @@
+{
+    "controller": "reportes-calidad-servicio:controllers/principal",
+    "checkForDuplicatesInQuickCreate": false
+}
