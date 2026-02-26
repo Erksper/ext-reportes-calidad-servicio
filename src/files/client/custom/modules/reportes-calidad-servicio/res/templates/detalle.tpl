@@ -5,7 +5,7 @@
             <div class="page-header-card">
                 <div class="d-flex justify-content-between align-items-center">
                     <div class="header-left">
-                        <div class="header-icon">
+                        <div class="header-icon" title="Ir a la encuesta">
                             <i class="fas fa-file-alt"></i>
                         </div>
                         <div class="header-content">
@@ -29,7 +29,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Leyenda de estados -->
     <div class="row mb-3">
         <div class="col-md-12">
@@ -46,7 +46,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Contenido dinámico -->
     <div id="detalle-container">
         <div class="text-center" style="padding: 80px 20px;">
@@ -87,6 +87,13 @@
     justify-content: center;
     color: white;
     font-size: 28px;
+    transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.header-icon:hover {
+    background: #9D8B5F;
+    transform: scale(1.08);
+    box-shadow: 0 4px 14px rgba(184, 162, 121, 0.4);
 }
 
 .page-title {
@@ -122,7 +129,6 @@
     align-items: center;
     gap: 10px;
 }
-
 .btn-volver:hover {
     background: #9D8B5F;
     border-color: #9D8B5F;
@@ -144,7 +150,6 @@
     align-items: center;
     gap: 10px;
 }
-
 .btn-workflow:hover {
     background: #9D8B5F;
     border-color: #9D8B5F;
@@ -152,7 +157,7 @@
     box-shadow: 0 4px 12px rgba(184, 162, 121, 0.3);
 }
 
-/* Leyenda de estados */
+/* Leyenda */
 .leyenda-estados {
     background: white;
     padding: 15px 20px;
@@ -163,18 +168,8 @@
     gap: 20px;
     flex-wrap: wrap;
 }
-
-.leyenda-titulo {
-    color: #363438;
-    font-size: 14px;
-}
-
-.leyenda-items {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-
+.leyenda-titulo { color: #363438; font-size: 14px; }
+.leyenda-items  { display: flex; gap: 10px; flex-wrap: wrap; }
 .leyenda-badge {
     color: white;
     padding: 6px 12px;
@@ -184,19 +179,15 @@
     cursor: help;
     transition: transform 0.2s ease;
 }
+.leyenda-badge:hover { transform: scale(1.05); }
 
-.leyenda-badge:hover {
-    transform: scale(1.05);
-}
-
-/* Estilos para campo editable */
+/* Campo editable */
 .campo-editable {
     position: relative;
     display: inline-flex;
     align-items: center;
     gap: 10px;
 }
-
 .campo-editable input {
     padding: 8px 12px;
     border: 2px solid #E6E6E6;
@@ -205,22 +196,18 @@
     font-weight: 500;
     transition: all 0.3s ease;
 }
-
 .campo-editable input:focus {
     border-color: #B8A279;
     outline: none;
     box-shadow: 0 0 0 3px rgba(184, 162, 121, 0.1);
 }
-
 .campo-editable input:disabled {
     background: transparent;
     border: none;
     padding: 0;
     color: #1A1A1A;
 }
-
-.btn-editar,
-.btn-guardar {
+.btn-editar, .btn-guardar {
     background: #B8A279;
     color: white;
     border: none;
@@ -233,31 +220,12 @@
     align-items: center;
     justify-content: center;
 }
-
-.btn-editar:hover,
-.btn-guardar:hover {
+.btn-editar:hover, .btn-guardar:hover {
     background: #9D8B5F;
     transform: scale(1.1);
 }
 
-.url-field {
-    background: #F5F5F5;
-    padding: 12px 15px;
-    border-radius: 6px;
-    border-left: 3px solid #B8A279;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.url-text {
-    flex: 1;
-    font-family: 'Courier New', monospace;
-    font-size: 14px;
-    color: #363438;
-    word-break: break-all;
-}
-
+/* Botón copiar base */
 .btn-copiar {
     background: #B8A279;
     color: white;
@@ -268,17 +236,22 @@
     transition: all 0.3s ease;
     white-space: nowrap;
     font-size: 13px;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 6px;
+    text-decoration: none;
+}
+.btn-copiar:hover { background: #9D8B5F; transform: scale(1.05); }
+
+/* Botón WhatsApp verde */
+.btn-whatsapp-verde {
+    background: #25D366 !important;
+}
+.btn-whatsapp-verde:hover {
+    background: #1da851 !important;
 }
 
-.btn-copiar:hover {
-    background: #9D8B5F;
-    transform: scale(1.05);
-}
-
-/* Cards de información */
+/* Cards */
 .info-card {
     background: white;
     border-radius: 12px;
@@ -287,7 +260,6 @@
     border: 1px solid #E6E6E6;
     margin-bottom: 20px;
 }
-
 .info-card-header {
     display: flex;
     align-items: center;
@@ -296,44 +268,17 @@
     padding-bottom: 15px;
     border-bottom: 2px solid #B8A279;
 }
-
-.info-card-icon {
-    color: #B8A279;
-    font-size: 20px;
-}
-
-.info-card-title {
-    color: #1A1A1A;
-    font-weight: 600;
-    font-size: 18px;
-    margin: 0;
-}
+.info-card-icon  { color: #B8A279; font-size: 20px; }
+.info-card-title { color: #1A1A1A; font-weight: 600; font-size: 18px; margin: 0; }
 
 .info-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 20px;
 }
-
-.info-item {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.info-label {
-    font-weight: 600;
-    color: #666666;
-    font-size: 13px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.info-value {
-    color: #1A1A1A;
-    font-size: 16px;
-    font-weight: 500;
-}
+.info-item  { display: flex; flex-direction: column; gap: 5px; }
+.info-label { font-weight: 600; color: #666666; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
+.info-value { color: #1A1A1A; font-size: 16px; font-weight: 500; }
 
 /* Calificaciones */
 .calificaciones-grid {
@@ -341,7 +286,6 @@
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 15px;
 }
-
 .calificacion-item {
     display: flex;
     justify-content: space-between;
@@ -351,23 +295,9 @@
     border-radius: 8px;
     border-left: 4px solid #B8A279;
 }
-
-.calificacion-label {
-    font-size: 14px;
-    color: #363438;
-    font-weight: 500;
-}
-
-.calificacion-valor {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.estrellas {
-    color: #B8A279;
-    font-size: 16px;
-}
+.calificacion-label { font-size: 14px; color: #363438; font-weight: 500; }
+.calificacion-valor { display: flex; align-items: center; gap: 8px; }
+.estrellas          { color: #B8A279; font-size: 16px; }
 
 /* Comentarios */
 .comentario-box {
@@ -390,40 +320,18 @@
     animation: spin 1s linear infinite;
     margin: 0 auto;
 }
-
 @keyframes spin {
-    0% { transform: rotate(0deg); }
+    0%   { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
 
 /* Responsive */
 @media (max-width: 768px) {
-    .detalle-encuesta-container {
-        padding: 15px;
-    }
-    
-    .header-left {
-        flex-direction: column;
-        text-align: center;
-    }
-    
-    .header-actions {
-        flex-direction: column;
-        width: 100%;
-    }
-    
-    .header-actions button {
-        width: 100%;
-        justify-content: center;
-    }
-    
-    .page-title {
-        font-size: 24px;
-    }
-    
-    .info-grid,
-    .calificaciones-grid {
-        grid-template-columns: 1fr;
-    }
+    .detalle-encuesta-container { padding: 15px; }
+    .header-left      { flex-direction: column; text-align: center; }
+    .header-actions   { flex-direction: column; width: 100%; }
+    .header-actions button { width: 100%; justify-content: center; }
+    .page-title       { font-size: 24px; }
+    .info-grid, .calificaciones-grid { grid-template-columns: 1fr; }
 }
 </style>
