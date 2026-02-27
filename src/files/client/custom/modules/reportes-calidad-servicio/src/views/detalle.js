@@ -106,9 +106,13 @@ define("reportes-calidad-servicio:views/detalle", [
 
         titleCase: function (str) {
             if (!str) return '';
-            return str.toLowerCase().replace(/\b\w/g, function (c) {
-                return c.toUpperCase();
-            });
+            // Capitalizar solo la primera letra de cada palabra, manejando
+            // correctamente tildes y ñ (que JS /\b/ trata como separadores).
+            // Estrategia: split por espacios, capitalizar primer carácter de cada token.
+            return str.toLowerCase().split(' ').map(function (palabra) {
+                if (!palabra) return '';
+                return palabra.charAt(0).toUpperCase() + palabra.slice(1);
+            }).join(' ');
         },
 
         renderizarDetalle: function () {
@@ -197,8 +201,8 @@ define("reportes-calidad-servicio:views/detalle", [
             html += '</div></div></div></div>';
 
             // ── Sección WhatsApp ───────────────────────────────────
-            // Se muestra SIEMPRE. El botón WhatsApp solo aparece si hay teléfono.
-            // phoneNumber null/undefined/''/string vacío → sin botón WhatsApp.
+            // Se muestra SIEMPRE. El botón "Enviar por WhatsApp" solo para
+            // casa nacional, gerentes y directores (si además hay teléfono).
             {
                 var mensajeWhatsapp   = this.generarMensajeWhatsapp(encuesta, clientNameDisplay, asesorNombreDisplay);
                 var rawPhone          = (encuesta.phoneNumber !== null && encuesta.phoneNumber !== undefined)
@@ -208,15 +212,21 @@ define("reportes-calidad-servicio:views/detalle", [
                 var hayTelefono       = telefonoLimpio.length > 0;
                 var mensajeCodificado = encodeURIComponent(mensajeWhatsapp);
 
+                var puedeVerBotonWA = this.permisos && (
+                    this.permisos.esCasaNacional ||
+                    this.permisos.esGerente      ||
+                    this.permisos.esDirector
+                );
+
                 html += '<div class="row"><div class="col-md-12"><div class="info-card">';
                 html += '<div class="info-card-header">';
                 html += '<i class="fab fa-whatsapp info-card-icon" style="color:#25D366;font-size:22px;"></i>';
-                html += '<h3 class="info-card-title">Mensaje de WhatsApp</h3>';
+                html += '<h3 class="info-card-title">Mensaje con link</h3>';
                 html += '</div>';
 
                 html += '<div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-bottom:12px;">';
                 html += '<button class="btn-copiar" id="btn-copiar-mensaje"><i class="fas fa-copy"></i> Copiar mensaje</button>';
-                if (hayTelefono) {
+                if (puedeVerBotonWA && hayTelefono) {
                     html += '<a class="btn-copiar btn-whatsapp-verde"'
                           + ' href="https://wa.me/' + telefonoLimpio + '?text=' + mensajeCodificado + '"'
                           + ' target="_blank">'
@@ -362,9 +372,21 @@ define("reportes-calidad-servicio:views/detalle", [
 
                 var nombreFirmante = this.titleCase(this.nombreCompletoUsuario) || 'el responsable';
                 var oficina = (this.nombreOficinaUsuario || '').trim();
-                var oficinaTexto = (!oficina || oficina.toLowerCase() === 'venezuela')
-                    ? 'de casa nacional'
-                    : 'de la Oficina ' + oficina;
+
+                var oficinaTexto;
+                if (permisos.esCasaNacional) {
+                    // Solo el rol Casa Nacional muestra "de casa nacional"
+                    oficinaTexto = (!oficina || oficina.toLowerCase() === 'venezuela')
+                        ? 'de casa nacional'
+                        : 'de la Oficina ' + oficina;
+                } else {
+                    // Gerente / Director: siempre muestra su oficina
+                    // Si por algún motivo no cargó, usa la oficina del registro
+                    var oficinaFinal = oficina || encuesta.oficinaNombre || '';
+                    oficinaTexto = oficinaFinal
+                        ? 'de la Oficina ' + oficinaFinal
+                        : 'de la oficina asignada';
+                }
 
                 return (
                     'Estimado Sr. / Sra. ' + clientName + ', es un gusto saludarle.\n\n' +

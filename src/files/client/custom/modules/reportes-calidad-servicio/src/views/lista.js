@@ -325,10 +325,9 @@ define("reportes-calidad-servicio:views/lista", [
                     return !excluidos.includes(nombre) && login !== 'admin';
                 })
                 .forEach(function (a) {
-                    // Normalizar a Title Case
-                    var nombre = (a.name || '').toLowerCase().replace(/\b\w/g, function (c) {
-                        return c.toUpperCase();
-                    });
+                    var nombre = (a.name || '').toLowerCase().split(' ').map(function (p) {
+                        return p ? p.charAt(0).toUpperCase() + p.slice(1) : '';
+                    }).join(' ');
                     select.append('<option value="' + a.id + '">' + nombre + '</option>');
                 });
 
@@ -605,10 +604,13 @@ define("reportes-calidad-servicio:views/lista", [
             return html;
         },
 
-        // Normalizar texto a Title Case
+        // Normalizar texto a Title Case (respeta tildes y ñ)
         titleCase: function (str) {
             if (!str) return '';
-            return str.toLowerCase().replace(/\b\w/g, function (c) { return c.toUpperCase(); });
+            return str.toLowerCase().split(' ').map(function (palabra) {
+                if (!palabra) return '';
+                return palabra.charAt(0).toUpperCase() + palabra.slice(1);
+            }).join(' ');
         },
 
         // Navegar a detalle pasando filtros en la URL
