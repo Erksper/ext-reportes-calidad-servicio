@@ -15,7 +15,13 @@ define("reportes-calidad-servicio:views/modules/filtros-oficinas", [], function 
 
         var permisos = this.view.permisosManager.getPermisos();
 
-        // 1. Asesores regulares solo ven su oficina
+        // 1. PRIMERO: Máxima jerarquía — admin y casa nacional ven todas las oficinas siempre
+        if (permisos.esAdministrativo || permisos.esCasaNacional) {
+            this.cargarOficinasPorCLA(claId);
+            return;
+        }
+
+        // 2. Asesores regulares solo ven su oficina
         if (permisos.esAsesorRegular) {
             if (permisos.oficinaUsuario) {
                 this.cargarSoloOficinaUsuario(oficinaSelect);
@@ -28,7 +34,7 @@ define("reportes-calidad-servicio:views/modules/filtros-oficinas", [], function 
             return;
         }
 
-        // 2. Roles de gestión (gerente/director/coordinador/afiliado)
+        // 3. Roles de gestión (gerente/director/coordinador/afiliado)
         if (
             permisos.esGerente ||
             permisos.esDirector ||
@@ -37,7 +43,7 @@ define("reportes-calidad-servicio:views/modules/filtros-oficinas", [], function 
         ) {
             // Verificar si el CLA seleccionado es el suyo
             if (claId && claId === permisos.claUsuario) {
-                // ✅ SOLUCIÓN: Mostrar solo 2 opciones para roles de gestión
+                // Mostrar solo 2 opciones para roles de gestión
                 this.cargarOpcionesParaRolesGestion(oficinaSelect, claId);
                 return;
             } else {
@@ -49,13 +55,7 @@ define("reportes-calidad-servicio:views/modules/filtros-oficinas", [], function 
             }
         }
 
-        // 3. Administrativos y Casa Nacional ven todas las oficinas
-        if (permisos.esAdministrativo || permisos.esCasaNacional) {
-            this.cargarOficinasPorCLA(claId);
-            return;
-        }
-
-        // Por defecto, cargar oficinas del CLA
+        // 4. Por defecto, cargar oficinas del CLA
         this.cargarOficinasPorCLA(claId);
     };
 
@@ -96,7 +96,7 @@ define("reportes-calidad-servicio:views/modules/filtros-oficinas", [], function 
                                         " (Mi oficina)</option>"
                                 );
 
-                                // ✅ Establecer "Todas las oficinas" como seleccionada por defecto
+                                // Establecer "Todas las oficinas" como seleccionada por defecto
                                 oficinaSelect.val("");
                                 oficinaSelect.prop("disabled", false);
 
@@ -148,7 +148,7 @@ define("reportes-calidad-servicio:views/modules/filtros-oficinas", [], function 
         }
     };
 
-    // ✅ NUEVO MÉTODO: Cargar solo la oficina del usuario
+    // Cargar solo la oficina del usuario
     FiltrosOficinasManager.prototype.cargarSoloOficinaUsuario = function (
         oficinaSelect
     ) {
@@ -494,7 +494,7 @@ define("reportes-calidad-servicio:views/modules/filtros-oficinas", [], function 
 
                     var permisos = this.view.permisosManager.getPermisos();
 
-                    // ✅ Mostrar botón de comparación solo si selecciona SU oficina
+                    // Mostrar botón de comparación solo si selecciona SU oficina
                     if (
                         oficinaId &&
                         oficinaId !== "" &&
@@ -519,7 +519,7 @@ define("reportes-calidad-servicio:views/modules/filtros-oficinas", [], function 
                             oficinaId || null;
                         this.view.filtrosCLAManager.filtros.asesor = null;
 
-                        // ✅ Si selecciona "Todas las oficinas" (valor vacío), mostrar estadísticas consolidadas
+                        // Si selecciona "Todas las oficinas" (valor vacío), mostrar estadísticas consolidadas
                         this.view.filtrosCLAManager.filtros.mostrarTodas =
                             !oficinaId;
 
@@ -531,7 +531,7 @@ define("reportes-calidad-servicio:views/modules/filtros-oficinas", [], function 
                             this.view.filtrosAsesoresManager.limpiarFiltros();
                         }
 
-                        // ✅ Cargar estadísticas según la selección
+                        // Cargar estadísticas según la selección
                         if (this.view.estadisticasManager) {
                             this.view.estadisticasManager.loadStatistics();
                         }
